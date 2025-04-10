@@ -5,12 +5,41 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>BizGame DEMO v0.1 Alpha</title>
   <link rel="stylesheet" href="style.css" />
+  <style>
+    .top-bar {
+      height: 120px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 10px;
+      background-color: #dda0dd;
+    }
+    .gold-info {
+      text-align: left;
+    }
+    .center-info {
+      text-align: center;
+      flex-grow: 1;
+    }
+    .round-info {
+      display: inline-block;
+      font-weight: bold;
+    }
+    .stage-bar {
+      display: block;
+      font-size: 0.9em;
+    }
+  </style>
 </head>
 <body>
   <div id="main-ui">
-    <div class="top-bar" style="height: 120px;">
+    <div class="top-bar">
       <div class="gold-info">金幣：18,474,654<br>回合收益：<span id="income">4,456,156</span></div>
-      <div class="round-info">回合數：18<br><span class="stage-bar">時間軸</span></div>
+      <div class="center-info">
+        <div class="round-info">回合數：18</div>
+        <span class="stage-bar">時間軸</span>
+      </div>
+      <div style="width: 150px;"></div> <!-- 占位保持左右對稱 -->
     </div>
 
     <div class="middle-section">
@@ -34,7 +63,6 @@
   </div>
 
   <script>
-    // 假設有新建築會觸發收入更新
     function updateIncome(newIncome) {
       document.getElementById("income").innerText = newIncome.toLocaleString();
     }
