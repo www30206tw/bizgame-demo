@@ -4,64 +4,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BizGame DEMO v0.1 Alpha</title>
+  <title>BizGame DEMO v0.5 Alpha</title>
   <link rel="stylesheet" href="style.css" />
-  <style>
-    .top-bar {
-      height: 120px;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      padding: 10px;
-      background-color: #dda0dd;
-    }
-    .gold-info {
-      text-align: left;
-    }
-    .center-info {
-      text-align: center;
-      flex-grow: 1;
-    }
-    .round-info {
-      display: inline-block;
-      font-weight: bold;
-    }
-    .stage-bar {
-      display: block;
-      font-size: 0.9em;
-    }
-    #draw-section {
-      display: none;
-      background: #fff8dc;
-      padding: 10px;
-      border-top: 2px solid #ccc;
-    }
-    .card-pool {
-      display: flex;
-      gap: 10px;
-      justify-content: center;
-      margin: 10px 0;
-    }
-    .card {
-      width: 120px;
-      height: 160px;
-      background: #f0f0f0;
-      border: 2px solid gray;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-    }
-    .card.selected {
-      border: 3px solid blue;
-    }
-    .draw-buttons {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-  </style>
 </head>
 <body>
   <div id="main-ui">
@@ -74,90 +18,36 @@
       <div style="width: 150px;"></div>
     </div>
 
-    <!-- 抽卡階段區塊 -->
     <div id="draw-section">
-      <h2 style="text-align:center">抽卡階段：請從以下卡片中選擇 2 張</h2>
-      <div class="card-pool" id="card-pool"></div>
-      <div class="draw-buttons">
-        <button onclick="refreshCards()">刷新卡片（2 金幣）</button>
-        <button onclick="skipDraw()">跳過本輪抽卡（+10 金幣）</button>
-        <button onclick="confirmDraw()">確定選卡</button>
+      <div class="draw-box">
+        <h2>抽卡階段：請從以下卡片中選擇 2 張</h2>
+        <div class="card-pool" id="card-pool"></div>
+        <div class="draw-buttons">
+          <button onclick="refreshCards()">刷新卡片（2 金幣）</button>
+          <button onclick="skipDraw()">跳過本輪抽卡（+10 金幣）</button>
+          <button onclick="confirmDraw()">確定選卡</button>
+        </div>
       </div>
     </div>
 
-    <!-- 地圖區 -->
     <div class="middle-section">
       <div class="sidebar left">
         <button class="btn-tech">科技樹</button>
       </div>
-
       <div class="map-area">
         <h2>地塊區（六邊形地塊）</h2>
       </div>
-
       <div class="sidebar right">
         <button class="btn-info">說明</button>
       </div>
     </div>
 
-    <div class="bottom-bar" style="height: 100px;">
+    <div class="bottom-bar">
       <div class="hand-cards">手排（建築）</div>
       <button class="btn-end">回合結束</button>
     </div>
   </div>
 
-  <script>
-    function updateIncome(newIncome) {
-      document.getElementById("income").innerText = newIncome.toLocaleString();
-    }
-
-    const allCards = ["科技卡 A", "科技卡 B", "建築卡 A", "建築卡 B", "建築卡 C", "建築卡 D"];
-
-    function startDrawPhase() {
-      document.getElementById("draw-section").style.display = "block";
-      drawCards();
-    }
-
-    function drawCards() {
-      const cardPool = document.getElementById("card-pool");
-      cardPool.innerHTML = "";
-      const selected = [];
-      while (selected.length < 5) {
-        const random = allCards[Math.floor(Math.random() * allCards.length)];
-        if (!selected.includes(random)) selected.push(random);
-      }
-      for (let name of selected) {
-        const div = document.createElement("div");
-        div.className = "card";
-        div.innerText = name;
-        div.onclick = () => div.classList.toggle("selected");
-        cardPool.appendChild(div);
-      }
-    }
-
-    function refreshCards() {
-      drawCards();
-    }
-
-    function skipDraw() {
-      alert("跳過抽卡，本回合 +10 金幣");
-      document.getElementById("draw-section").style.display = "none";
-    }
-
-    function confirmDraw() {
-      const selected = document.querySelectorAll(".card.selected");
-      if (selected.length !== 2) {
-        alert("請選擇 2 張卡片");
-        return;
-      }
-      const hand = document.querySelector(".hand-cards");
-      selected.forEach(card => {
-        const clone = card.cloneNode(true);
-        clone.classList.remove("selected");
-        hand.appendChild(clone);
-      });
-      document.getElementById("draw-section").style.display = "none";
-    }
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>
