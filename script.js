@@ -1,0 +1,1 @@
+console.log('BizGame demo loaded');
