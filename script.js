@@ -1,1 +1,1 @@
-console.log('BizGame demo loaded');
+console.log('BizGame DEMO layout loaded');

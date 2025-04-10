@@ -1,1 +1,36 @@
-body { font-family: sans-serif; background-color: #f4f4f4; text-align: center; }
+
+body {
+  font-family: sans-serif;
+  background-color: #f0f0f0;
+  margin: 0;
+  padding: 0;
+}
+#main-ui {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+.top-bar, .bottom-bar {
+  background: #dda0dd;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+}
+.middle-section {
+  flex: 1;
+  display: flex;
+  background: #dcdcdc;
+}
+.sidebar {
+  width: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.map-area {
+  flex: 1;
+  background: #6495ed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
