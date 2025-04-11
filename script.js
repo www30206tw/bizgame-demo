@@ -79,8 +79,12 @@ window.onload = function () {
     drawSection.style.display = 'none';
   };
 
-  // 確定選卡，將選取的卡牌複製到手排區
+  // 確定選卡：當選擇卡牌不足 2 張時，給予提示，否則將選取的卡牌複製到手排區
   window.confirmDraw = function () {
+    if (selectedCards.length < 2) {
+      alert("請至少選擇2張卡牌！");
+      return;
+    }
     selectedCards.forEach((c) => {
       const copy = createCard(c.dataset.type, c.innerText);
       hand.appendChild(copy);
@@ -119,7 +123,6 @@ window.onload = function () {
         hex.setAttribute("data-has-building", "true");
 
         // 從手排中移除該卡牌
-        // 僅在手排中搜尋可確保只移除正確的元素
         const cardElem = hand.querySelector(`[data-card-id="${cardId}"]`);
         if (cardElem) {
           cardElem.remove();
@@ -149,7 +152,7 @@ window.onload = function () {
   endTurnBtn.addEventListener('click', function () {
     currentRound++;
     updateRoundDisplay();
-    // 依設計，回合結束後可清空手排（此處保留標題文字）
+    // 清空手排內容（依設計可調整）
     hand.innerHTML = '手排（建築）';
     window.startDrawPhase();
   });
