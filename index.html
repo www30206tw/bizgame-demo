@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
@@ -18,21 +19,27 @@
     </div>
   </div>
 
+  <!-- 抽卡階段浮層 -->
+  <div id="draw-section">
+    <div class="draw-box">
+      <h2>抽卡階段：請從以下卡片中選擇 2 張</h2>
+      <div class="card-pool" id="card-pool"></div>
+      <div class="draw-buttons">
+        <button onclick="refreshCards()">刷新卡片（2 金幣）</button>
+        <button onclick="skipDraw()">跳過本輪抽卡（+10 金幣）</button>
+        <button onclick="confirmDraw()">確定選卡</button>
+      </div>
+    </div>
+  </div>
+
   <div class="middle-section">
     <div class="sidebar"><button>科技樹</button></div>
-    <div class="map-area" id="map-area">
-      <h2>地塊區（六邊形地塊）</h2>
-      <div class="tiles-container" id="tiles-container"></div>
-    </div>
+    <div class="map-area"><h2>地塊區（六邊形地塊）</h2></div>
     <div class="sidebar"><button>說明</button></div>
   </div>
 
   <div class="bottom-bar">
-    <div class="hand-cards" id="hand">
-      手排（建築）
-      <div class="card" draggable="true" ondragstart="onDragStart(event)" data-card="建築卡 A">建築卡 A</div>
-      <div class="card" draggable="true" ondragstart="onDragStart(event)" data-card="科技卡 B">科技卡 B</div>
-    </div>
+    <div class="hand-cards" id="hand">手排（建築）</div>
     <button class="btn-end">回合結束</button>
   </div>
 
