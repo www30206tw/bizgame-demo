@@ -1,1 +1,78 @@
-// Placeholder for style.css
+
+body {
+  margin: 0;
+  font-family: "微軟正黑體", sans-serif;
+}
+.top-bar {
+  background: plum;
+  padding: 5px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.center-info {
+  text-align: center;
+}
+.middle-section {
+  display: flex;
+  background: lightgray;
+}
+.sidebar {
+  width: 80px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.map-area {
+  flex: 1;
+  background: cornflowerblue;
+  padding: 20px;
+  text-align: center;
+}
+.bottom-bar {
+  background: violet;
+  padding: 8px 10px;
+  display: flex;
+  justify-content: space-between;
+}
+.hand-cards {
+  min-height: 140px;
+  padding: 5px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.card {
+  width: 80px;
+  height: 120px;
+  border: 1px solid black;
+  background: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+}
+.card.selected {
+  border: 2px solid red;
+}
+#draw-section {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  display: none;
+}
+.draw-box {
+  margin: 80px auto;
+  background: #fff;
+  padding: 20px;
+  max-width: 800px;
+  text-align: center;
+}
+.card-pool {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  padding: 20px;
+}
