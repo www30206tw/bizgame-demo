@@ -17,6 +17,15 @@ window.onload = function () {
     roundNumberElem.innerText = currentRound;
   }
 
+  // 簡單洗牌函式
+  function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  }
+
   // 建立卡牌元素，並賦予唯一識別碼
   function createCard(type, label) {
     const card = document.createElement('div');
@@ -32,7 +41,7 @@ window.onload = function () {
     return card;
   }
 
-  // 抽卡函式：從較大牌庫中隨機選取 5 張卡牌供選擇
+  // 抽卡函式：從較大牌庫中隨機抽取 5 張卡牌供選擇
   function drawCards() {
     cardPool.innerHTML = '';
     const availableCards = [
@@ -41,8 +50,7 @@ window.onload = function () {
       '建築卡 E', '建築卡 F', '科技卡 D',
       '建築卡 G'
     ];
-    // 隨機洗牌
-    const shuffled = availableCards.slice().sort(() => Math.random() - 0.5);
+    const shuffled = shuffle(availableCards.slice());
     const drawnCards = shuffled.slice(0, 5);
     drawnCards.forEach((label) => {
       const card = createCard(label.includes('建築') ? 'building' : 'tech', label);
@@ -60,7 +68,7 @@ window.onload = function () {
     });
   }
 
-  // 刷新卡牌：現在會重抽牌庫的全新組合
+  // 刷新卡牌：清空選取後重新抽牌
   window.refreshCards = function () {
     selectedCards.length = 0;
     drawCards();
@@ -82,14 +90,12 @@ window.onload = function () {
 
   // 開始抽卡階段，每回合開始時呼叫
   window.startDrawPhase = function () {
-    // 如有需求，可以在此重置手排內容
-    // hand.innerHTML = '手排（建築）';
     selectedCards.length = 0;
     drawSection.style.display = 'flex';
     drawCards();
   };
 
-  // 初始化六邊形地塊，並加入拖曳及覆蓋確認邏輯
+  // 初始化六邊形地塊，加入拖曳與覆蓋確認邏輯
   function initMapArea() {
     mapArea.innerHTML = '<h2>地塊區（六邊形地塊）</h2>';
     for (let i = 0; i < 6; i++) {
@@ -105,16 +111,17 @@ window.onload = function () {
         // 若地塊已有建築，詢問是否覆蓋
         if (hex.getAttribute("data-has-building") === "true") {
           if (!confirm("該地塊已經有建築，是否覆蓋？")) {
-            return; // 若取消則不作更動
+            return;
           }
         }
         // 放置新的建築到地塊
         hex.innerText = label;
         hex.setAttribute("data-has-building", "true");
 
-        // 從手排中移除該卡牌（僅限手排內的建築卡）
-        const cardElem = document.querySelector(`[data-card-id="${cardId}"]`);
-        if (cardElem && cardElem.parentElement.id === "hand") {
+        // 從手排中移除該卡牌
+        // 僅在手排中搜尋可確保只移除正確的元素
+        const cardElem = hand.querySelector(`[data-card-id="${cardId}"]`);
+        if (cardElem) {
           cardElem.remove();
         }
       };
@@ -123,7 +130,7 @@ window.onload = function () {
   }
   initMapArea();
 
-  // 開始遊戲：隱藏開始畫面，初始化回合數並進入抽卡階段
+  // 開始遊戲：隱藏開始畫面，初始化回合數，進入抽卡階段
   function startGame() {
     startScreen.style.display = 'none';
     currentRound = 1;
@@ -138,12 +145,11 @@ window.onload = function () {
     }
   });
 
-  // 回合結束按鈕：更新回合數並開始新一回合的抽卡階段
+  // 回合結束：更新回合數並開始新回合抽卡階段
   endTurnBtn.addEventListener('click', function () {
-    // 可在此加入本回合金幣收益計算等邏輯
     currentRound++;
     updateRoundDisplay();
-    // 重置手排內容（依需求可調整）
+    // 依設計，回合結束後可清空手排（此處保留標題文字）
     hand.innerHTML = '手排（建築）';
     window.startDrawPhase();
   });
