@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>DEMO v0.9</title>
+    <title>DEMO with 20 Hex Tiles</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -31,7 +31,6 @@
         <h2>抽卡階段：請從以下卡片中選擇 2 張</h2>
         <div class="card-pool" id="card-pool"></div>
         <div class="draw-buttons">
-          <!-- 特別給刷新按鈕加上 id，便於程式動態更新顯示花費 -->
           <button id="refresh-btn" onclick="refreshCards()">刷新卡片(2 金幣)</button>
           <button onclick="skipDraw()">跳過本輪抽卡（+10 金幣）</button>
           <button onclick="confirmDraw()">確定選卡</button>
@@ -41,11 +40,16 @@
 
     <!-- 中間地塊與側邊欄區域 -->
     <div class="middle-section">
-      <div class="sidebar"><button disabled>科技樹</button></div>
-      <div class="map-area" id="map-area">
-        <h2>地塊區（六邊形地塊）</h2>
+      <div class="sidebar">
+        <button disabled>科技樹</button>
       </div>
-      <div class="sidebar"><button>說明</button></div>
+      <div class="map-area" id="map-area">
+        <h2>地塊區（20 塊）</h2>
+      </div>
+      <div class="sidebar">
+        <!-- 說明按鈕，點擊會顯示彈窗 -->
+        <button id="info-btn">說明</button>
+      </div>
     </div>
 
     <!-- 底部手排與回合結束按鈕 -->
@@ -54,6 +58,21 @@
       <button class="btn-end" id="end-turn-btn">回合結束</button>
     </div>
 
+    <!-- 說明彈窗 -->
+    <div id="info-modal" class="info-modal">
+      <div class="info-content">
+        <h2>地塊說明</h2>
+        <ul>
+          <li><span class="tile-tag city"></span> 繁華區：建築產出額外 +2</li>
+          <li><span class="tile-tag slum"></span> 貧民窟：若 3 塊（含）以上相連的貧民窟都有建築，則各建築產出 +1</li>
+          <li><span class="tile-tag river"></span> 河流：建築產出 -1</li>
+          <li><span class="tile-tag wasteland"></span> 荒原：無效果</li>
+        </ul>
+        <button id="close-info-btn">關閉</button>
+      </div>
+    </div>
+
     <script src="script.js" defer></script>
   </body>
 </html>
+
