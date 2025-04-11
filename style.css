@@ -1,78 +1,119 @@
-
 body {
   margin: 0;
-  font-family: "微軟正黑體", sans-serif;
+  font-family: sans-serif;
 }
-.top-bar {
-  background: plum;
-  padding: 5px 10px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.center-info {
-  text-align: center;
-}
-.middle-section {
-  display: flex;
-  background: lightgray;
-}
-.sidebar {
-  width: 80px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-.map-area {
-  flex: 1;
-  background: cornflowerblue;
-  padding: 20px;
-  text-align: center;
-}
+
+.top-bar,
 .bottom-bar {
   background: violet;
-  padding: 8px 10px;
+  padding: 10px;
   display: flex;
   justify-content: space-between;
 }
-.hand-cards {
-  min-height: 140px;
-  padding: 5px 10px;
+
+.middle-section {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  background: #74b9ff;
+  height: 300px;
 }
-.card {
-  width: 80px;
-  height: 120px;
-  border: 1px solid black;
-  background: white;
+
+.map-area {
+  flex: 1;
+  background: #74b9ff;
+  padding: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+}
+
+.sidebar {
+  width: 60px;
+  background: #ddd;
   display: flex;
   justify-content: center;
   align-items: center;
-  cursor: pointer;
 }
-.card.selected {
-  border: 2px solid red;
+
+.hand-cards {
+  display: flex;
+  gap: 10px;
+  align-items: center;
 }
-#draw-section {
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 999;
-  display: none;
-}
-.draw-box {
-  margin: 80px auto;
-  background: #fff;
+
+.card {
+  border: 1px solid #333;
   padding: 20px;
-  max-width: 800px;
+  background: #eee;
+  cursor: pointer;
+  width: 80px;
   text-align: center;
 }
+
+.card.selected {
+  background: yellow;
+}
+
+.draw-box {
+  background: beige;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  margin: auto;
+}
+
+#draw-section {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(10, 10, 10, 0.5);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
 .card-pool {
   display: flex;
+  gap: 10px;
   justify-content: center;
-  gap: 15px;
-  padding: 20px;
+  margin-bottom: 10px;
+}
+
+.hex-tile {
+  width: 80px;
+  height: 80px;
+  margin: 5px;
+  background: #dfe6e9;
+  clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 14px;
+}
+
+/* 開始畫面的樣式 */
+.start-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.start-screen h1 {
+  font-size: 3em;
+  margin-bottom: 20px;
+}
+
+.start-screen p {
+  font-size: 1.5em;
 }
