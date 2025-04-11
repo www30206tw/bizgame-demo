@@ -18,6 +18,7 @@ window.onload = function () {
   const endTurnBtn        = document.getElementById('end-turn-btn');
   const goldAmountElem    = document.getElementById('gold-amount');
   const roundGoldElem     = document.getElementById('round-gold');
+  const refreshBtn        = document.getElementById('refresh-btn');
 
   // 用來暫存本次抽卡選取的卡牌 DOM 物件
   const selectedCards = [];
@@ -31,6 +32,11 @@ window.onload = function () {
   function updateResourceDisplay() {
     goldAmountElem.innerText  = currentGold;
     roundGoldElem.innerText   = roundRevenue;
+  }
+  // 動態更新刷新按鈕的文字，顯示下一次刷新的金幣花費
+  function updateRefreshButton() {
+    const cost = 2 * (refreshCount + 1);
+    refreshBtn.textContent = `刷新卡片(${cost} 金幣)`;
   }
 
   /* ========= 簡單洗牌函式 ========= */
@@ -73,6 +79,7 @@ window.onload = function () {
   }
 
   /* ========= 抽卡邏輯 ========= */
+  // 建立 5 張建築卡供玩家選擇
   function drawCards() {
     cardPool.innerHTML = '';
     // 僅生成建築卡（科技卡暫不設計）
@@ -96,7 +103,7 @@ window.onload = function () {
     });
   }
 
-  // 刷新卡牌：扣除金幣並根據本回合刷新次數增加成本
+  // 刷新卡片：扣除金幣並根據本回合刷新次數增加刷新成本
   window.refreshCards = function () {
     const cost = 2 * (refreshCount + 1); // 第一次2金, 第二次4金, ...
     if (currentGold < cost) {
@@ -104,8 +111,10 @@ window.onload = function () {
       return;
     }
     currentGold -= cost;
-    updateResourceDisplay();
     refreshCount++;
+    updateResourceDisplay();
+    updateRefreshButton();  // 更新按鈕文字
+
     selectedCards.length = 0;
     drawCards();
   };
@@ -135,6 +144,7 @@ window.onload = function () {
   window.startDrawPhase = function () {
     refreshCount = 0;
     selectedCards.length = 0;
+    updateRefreshButton(); // 初始化刷新按鈕文字顯示
     drawSection.style.display = 'flex';
     drawCards();
   };
@@ -217,4 +227,3 @@ window.onload = function () {
     window.startDrawPhase();
   });
 };
-
