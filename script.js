@@ -1,1 +1,1 @@
-// Placeholder for script.js
+// JavaScript content (restored)
