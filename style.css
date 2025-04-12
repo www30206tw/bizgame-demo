@@ -7,7 +7,7 @@ body {
 /* 頂部、底部欄位 */
 .top-bar,
 .bottom-bar {
-  background: pink; /* 與原先相似顏色，可自行調整 */
+  background: pink;
   padding: 10px;
   display: flex;
   justify-content: space-between;
@@ -21,8 +21,8 @@ body {
 
 .map-area {
   flex: 1;
-  position: relative; /* 讓絕對定位的 hex 可以自由放置 */
-  margin: 20px;       /* 與邊界保留一些空間 */
+  position: relative;
+  margin: 20px; /* 與邊界保留一些空間 */
 }
 
 .sidebar {
@@ -151,7 +151,7 @@ body {
   align-items: center;
   font-size: 14px;
   color: #fff;
-  position: absolute; /* 改用絕對定位來手動排列 */
+  position: absolute; /* 絕對定位 */
 }
 
 /* 四種地塊的顏色 */
