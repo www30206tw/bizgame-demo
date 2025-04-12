@@ -2,17 +2,13 @@
 let cardIdCounter = 0;
 
 window.onload = function () {
-  /********************************************
-   * 回合與資源變數
-   ********************************************/
-  let currentRound = 1;
-  let currentGold = 0;         // 玩家目前總金幣
-  let roundRevenue = 0;        // 本回合累計收益
-  let refreshCount = 0;        // 本回合刷新次數 (依次疊加刷新成本)
+  /* ========== 遊戲狀態 ========== */
+  let currentRound   = 1;
+  let currentGold    = 0;  // 玩家目前總金幣
+  let roundRevenue   = 0;  // 本回合累計收益
+  let refreshCount   = 0;  // 本回合刷新次數 (依次疊加成本)
 
-  /********************************************
-   * 介面元素
-   ********************************************/
+  /* ========== 介面元素 ========== */
   const startScreen     = document.getElementById('start-screen');
   const drawSection     = document.getElementById('draw-section');
   const cardPool        = document.getElementById('card-pool');
@@ -24,89 +20,88 @@ window.onload = function () {
   const roundGoldElem   = document.getElementById('round-gold');
   const refreshBtn      = document.getElementById('refresh-btn');
 
-  // 彈窗 (說明)
+  // 說明彈窗
   const infoBtn         = document.getElementById('info-btn');
   const infoModal       = document.getElementById('info-modal');
   const closeInfoBtn    = document.getElementById('close-info-btn');
 
-  // 暫存本回合選取的卡牌
+  // 暫存本回合選取的卡牌 DOM
   const selectedCards = [];
 
-  /********************************************
-   * 地塊資料 (預排 4 列 × 5 行 = 20 格)
-   * 說明:
-   *  - row, col：該地塊位於第幾列第幾行
-   *  - type：地塊類型，可為 city(繁華區)、slum(貧民窟)、river(河流)、wasteland(荒原)
-   *  - buildingProduce：實際放置的建築生產值 (若還沒放建築，為 0)
-   *  - buildingPlaced：是否已放置建築
-   *  - adjacency：稍後會根據 (row, col) 計算相鄰地塊
-   ********************************************/
+  /* ========== 地塊資料(4×5=20) ========== */
+  //   需求： 
+  //   - 3 塊繁華區相鄰 (city)
+  //   - 5 塊貧民窟 (slum) 相連
+  //   - 4 塊河流(river) 連成一線
+  //   - 其餘為荒原 (wasteland)
+  //
+  //   這裡預先手動配置，並在 BFS 中做「odd-r 偏移」計算相鄰。
+  //
+  //   row=0: (0,0) (0,1) (0,2) (0,3) (0,4)
+  //   row=1: (1,0) (1,1) (1,2) (1,3) (1,4)
+  //   row=2: (2,0) (2,1) (2,2) (2,3) (2,4)
+  //   row=3: (3,0) (3,1) (3,2) (3,3) (3,4)
   const tileMap = [
     // row0
-    { row:0, col:0, type:'city' },       // 繁華區
-    { row:0, col:1, type:'wasteland' },
-    { row:0, col:2, type:'wasteland' },
-    { row:0, col:3, type:'city' },       // 繁華區
-    { row:0, col:4, type:'wasteland' },
+    { row:0, col:0, type:'wasteland' },
+    { row:0, col:1, type:'river' },
+    { row:0, col:2, type:'river' },
+    { row:0, col:3, type:'river' },
+    { row:0, col:4, type:'river' },
 
     // row1
     { row:1, col:0, type:'wasteland' },
-    { row:1, col:1, type:'slum' },       // 貧民窟
-    { row:1, col:2, type:'slum' },       // 貧民窟
-    { row:1, col:3, type:'slum' },       // 貧民窟
+    { row:1, col:1, type:'slum' },
+    { row:1, col:2, type:'city' },
+    { row:1, col:3, type:'slum' },
     { row:1, col:4, type:'wasteland' },
 
     // row2
-    { row:2, col:0, type:'river' },      // 河流
-    { row:2, col:1, type:'river' },      // 河流
-    { row:2, col:2, type:'river' },      // 河流
-    { row:2, col:3, type:'river' },      // 河流
+    { row:2, col:0, type:'wasteland' },
+    { row:2, col:1, type:'slum' },
+    { row:2, col:2, type:'city' },
+    { row:2, col:3, type:'city' },
     { row:2, col:4, type:'wasteland' },
 
     // row3
-    { row:3, col:0, type:'slum' },       // 貧民窟
-    { row:3, col:1, type:'slum' },       // 貧民窟
-    { row:3, col:2, type:'city' },       // 繁華區
-    { row:3, col:3, type:'wasteland' },
+    { row:3, col:0, type:'wasteland' },
+    { row:3, col:1, type:'wasteland' },
+    { row:3, col:2, type:'slum' },
+    { row:3, col:3, type:'slum' },
     { row:3, col:4, type:'wasteland' },
   ];
 
-  // 依序為每個 tile 加上額外屬性
+  // 給每個 tile 加上基礎屬性
   tileMap.forEach((t, idx) => {
-    t.id = idx;
-    t.buildingProduce = 0;
-    t.buildingPlaced = false;
-    t.adjacency = [];
+    t.id                = idx;
+    t.buildingProduce   = 0;   // 當前建築產出
+    t.buildingPlaced    = false;
+    t.slumBonusGranted  = false; // 避免重複加貧民窟 +1
+    t.adjacency         = [];
   });
 
-  /********************************************
-   * 計算地塊之間的鄰接關係 (Hex 格式)
-   *  這裡採用「奇偶行」偏移邏輯
-   ********************************************/
+  /* ========== 計算 Hex 格狀鄰接(odd-r) ========== */
   function inBounds(r, c) {
     return (r >= 0 && r < 4 && c >= 0 && c < 5);
   }
 
   function computeAdjacency() {
-    // 六邊形網格的相鄰規則 (假設偶數 row 不偏移，奇數 row 有點偏移)
-    // 為簡化，這裡用一個常見的 "odd-r" 或 "even-r" 偏移法
-    // 若不熟悉可直接手刻，也可參考各 Hex 庫
-
+    // odd-r 偏移 hex，相鄰方向定義
     const directionsEven = [
-      { dr: -1, dc: 0 },  // 上
-      { dr: -1, dc: +1 }, // 右上
-      { dr: 0,  dc: -1 }, // 左
-      { dr: 0,  dc: +1 }, // 右
-      { dr: +1, dc: 0 },  // 下
-      { dr: +1, dc: +1 }  // 右下
+      { dr: -1, dc: 0 },
+      { dr: -1, dc: +1 },
+      { dr: 0,  dc: -1 },
+      { dr: 0,  dc: +1 },
+      { dr: +1, dc: 0 },
+      { dr: +1, dc: +1 }
     ];
     const directionsOdd = [
-      { dr: -1, dc: -1 }, // 左上
-      { dr: -1, dc: 0 },  // 上
-      { dr: 0,  dc: -1 }, // 左
-      { dr: 0,  dc: +1 }, // 右
-      { dr: +1, dc: -1 }, // 左下
-      { dr: +1, dc: 0 }   // 下
+      { dr: -1, dc: -1 },
+      { dr: -1, dc: 0 },
+      { dr: 0,  dc: -1 },
+      { dr: 0,  dc: +1 },
+      { dr: +1, dc: -1 },
+      { dr: +1, dc: 0 }
     ];
 
     tileMap.forEach((tile) => {
@@ -114,11 +109,10 @@ window.onload = function () {
       const isEvenRow = (row % 2 === 0);
       const dirSet = isEvenRow ? directionsEven : directionsOdd;
 
-      dirSet.forEach((d) => {
+      dirSet.forEach(d => {
         const nr = row + d.dr;
         const nc = col + d.dc;
         if (inBounds(nr, nc)) {
-          // 找到對應的 tile
           const neighbor = tileMap.find(t => t.row === nr && t.col === nc);
           if (neighbor) {
             tile.adjacency.push(neighbor.id);
@@ -129,9 +123,7 @@ window.onload = function () {
   }
   computeAdjacency();
 
-  /********************************************
-   * UI 函式
-   ********************************************/
+  /* ========== 基礎 UI 更新 ========== */
   function updateRoundDisplay() {
     roundNumberElem.innerText = currentRound;
   }
@@ -141,24 +133,21 @@ window.onload = function () {
     roundGoldElem.innerText  = roundRevenue;
   }
 
-  // 更新刷新按鈕文字
   function updateRefreshButton() {
     const cost = 2 * (refreshCount + 1);
     refreshBtn.textContent = `刷新卡片(${cost} 金幣)`;
   }
 
-  /********************************************
-   * 建立建築卡 (預設產出6)
-   ********************************************/
+  /* ========== 卡牌生成 (建築) ========== */
   function createBuildingCard(buildingName) {
-    const produceAmount = 6;
-    const rarity = "普通";
+    const produceAmount = 6;  // 基礎產出
+    const rarity        = "普通";
     const card = document.createElement('div');
-    card.className = 'card';
-    card.dataset.type = 'building';
-    card.dataset.produce = produceAmount;
-    card.dataset.cardId = ++cardIdCounter; 
-    card.draggable = true;
+    card.className      = 'card';
+    card.dataset.type   = 'building';
+    card.dataset.produce= produceAmount;
+    card.dataset.cardId = ++cardIdCounter;
+    card.draggable      = true;
 
     card.innerHTML = `
       <div class="card-gold-output">${produceAmount}</div>
@@ -176,10 +165,7 @@ window.onload = function () {
     return card;
   }
 
-  /********************************************
-   * 抽卡邏輯
-   ********************************************/
-  // 簡單洗牌函式
+  /* ========== 抽卡邏輯 ========== */
   function shuffle(array) {
     for (let i = array.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -209,7 +195,6 @@ window.onload = function () {
     });
   }
 
-  // 刷新卡片
   window.refreshCards = function () {
     const cost = 2 * (refreshCount + 1);
     if (currentGold < cost) {
@@ -225,14 +210,12 @@ window.onload = function () {
     drawCards();
   };
 
-  // 跳過抽卡
   window.skipDraw = function () {
     currentGold += 10;
     updateResourceDisplay();
     drawSection.style.display = 'none';
   };
 
-  // 確定選卡
   window.confirmDraw = function () {
     if (selectedCards.length < 2) {
       alert("請至少選擇 2 張卡牌！");
@@ -245,7 +228,6 @@ window.onload = function () {
     drawSection.style.display = 'none';
   };
 
-  // 開始抽卡階段
   window.startDrawPhase = function () {
     refreshCount = 0;
     selectedCards.length = 0;
@@ -254,63 +236,48 @@ window.onload = function () {
     drawCards();
   };
 
-  /********************************************
-   * 建立地塊 (20 塊) 與拖曳事件
-   ********************************************/
+  /* ========== 建立地塊並渲染 ========== */
   function createAllTiles() {
     tileMap.forEach((tile) => {
       const hex = document.createElement('div');
       hex.className = 'hex-tile';
 
       // 根據 type 決定顏色
-      switch(tile.type) {
-        case 'city':
-          hex.classList.add('city-tile');
-          break;
-        case 'slum':
-          hex.classList.add('slum-tile');
-          break;
-        case 'river':
-          hex.classList.add('river-tile');
-          break;
-        default:
-          // wasteland
-          hex.classList.add('wasteland-tile');
-          break;
-      }
+      if      (tile.type === 'city')      hex.classList.add('city-tile');
+      else if (tile.type === 'slum')      hex.classList.add('slum-tile');
+      else if (tile.type === 'river')     hex.classList.add('river-tile');
+      else                                hex.classList.add('wasteland-tile');
 
-      hex.textContent = '?';  // 可視需求改成 tile.type
+      hex.textContent = '?';  // 可改成 tile.type 以利除錯
       hex.dataset.tileId = tile.id;
+
       // 拖曳放置
       hex.ondragover = (e) => e.preventDefault();
       hex.ondrop = (e) => {
         e.preventDefault();
-        const cardId = e.dataTransfer.getData('cardId');
-        // 找到對應手排卡
+        const cardId   = e.dataTransfer.getData('cardId');
         const cardElem = hand.querySelector(`[data-card-id="${cardId}"]`);
         if (!cardElem) return;
-
-        placeBuildingOnTile(tile, cardElem); 
+        placeBuildingOnTile(tile, cardElem);
       };
 
       mapArea.appendChild(hex);
     });
   }
 
-  /********************************************
-   * 放置建築到地塊: 計算最終產出
-   ********************************************/
+  /* ========== 放置建築到地塊：計算產出 ========== */
   function placeBuildingOnTile(tile, cardElem) {
-    // 若該地塊已經有建築，先把舊的產出從 roundRevenue 中扣除
+    // 若地塊已有建築，先扣除舊產出
     if (tile.buildingPlaced) {
       roundRevenue -= tile.buildingProduce;
-      tile.buildingProduce = 0; 
+      tile.buildingProduce   = 0;
+      tile.slumBonusGranted  = false; // 覆蓋建築後，重置貧民窟加成狀態
     }
 
-    // 計算建築的基礎產出(手排卡上的 dataset.produce)
+    // 建築基礎產出
     let produceVal = parseInt(cardElem.dataset.produce) || 6;
 
-    // 額外修正：繁華區 +2
+    // 繁華區 +2
     if (tile.type === 'city') {
       produceVal += 2;
     }
@@ -318,38 +285,34 @@ window.onload = function () {
     if (tile.type === 'river') {
       produceVal -= 1;
     }
-    // 貧民窟: 先不加成，等下做「貧民窟相連」判斷再加
 
-    // 設定 tile 的建築資訊
     tile.buildingProduce = produceVal;
     tile.buildingPlaced  = true;
 
-    // 更新畫面: 在地塊上顯示建築名稱
+    // 更新畫面：在地塊上顯示卡牌名稱
     const thisHex = mapArea.querySelector(`[data-tile-id="${tile.id}"]`);
     thisHex.textContent = cardElem.querySelector('.card-name').innerText;
 
-    // 從手排移除卡牌
+    // 手排移除該卡
     cardElem.remove();
 
-    // 重新計算「貧民窟相連」的加成 (若該 tile 是 slum)
+    // 若是貧民窟，就檢查是否形成 3(含)以上相連
+    // 只對尚未加成的建築進行 +1
     if (tile.type === 'slum') {
       checkSlumClusterAndAddBonus(tile.id);
     }
 
-    // 最後把計算完的建築產值加入 roundRevenue
+    // 最後把計算完的建築產值加入回合收益
     roundRevenue += tile.buildingProduce;
     updateResourceDisplay();
   }
 
-  /********************************************
-   * 判斷貧民窟是否形成 3 個 (含) 以上相連
-   * 若有 >= 3 連通的貧民窟建築，則當下區塊的所有建築產出各 +1
-   ********************************************/
+  /* ========== 判斷貧民窟相連：若>=3，+1 ========== */
   function checkSlumClusterAndAddBonus(startId) {
-    // 獲得相連的所有 "slum" 且有建築的 tile
+    // BFS：找出與 startId 同樣是 slum、有建築的相連集合
     const visited = new Set();
     const queue = [startId];
-    const cluster = []; // 存放符合條件的 tile id
+    const cluster = [];
 
     while (queue.length > 0) {
       const currId = queue.shift();
@@ -359,7 +322,7 @@ window.onload = function () {
       const t = tileMap[currId];
       if (t.type === 'slum' && t.buildingPlaced) {
         cluster.push(currId);
-        // 將相鄰的 tile 加入 queue
+        // 搜尋相鄰
         t.adjacency.forEach(nbId => {
           const nbTile = tileMap[nbId];
           if (!visited.has(nbId) && nbTile.type === 'slum' && nbTile.buildingPlaced) {
@@ -369,40 +332,42 @@ window.onload = function () {
       }
     }
 
-    // 若形成 3 塊以上相連的貧民窟，則為這些區塊內的建築+1產出
+    // 若相連貧民窟 >=3，就為尚未加成的建築 +1
     if (cluster.length >= 3) {
       cluster.forEach(cid => {
-        // 先從 roundRevenue 中扣除原本建築的產出
-        roundRevenue -= tileMap[cid].buildingProduce;
-        tileMap[cid].buildingProduce += 1;
-        // 再把新的值加回 roundRevenue
-        roundRevenue += tileMap[cid].buildingProduce;
+        const slumTile = tileMap[cid];
+        // 若該地塊尚未加成過 => 加 1
+        if (!slumTile.slumBonusGranted) {
+          roundRevenue -= slumTile.buildingProduce;
+          slumTile.buildingProduce += 1;
+          slumTile.slumBonusGranted = true; // 避免重複加
+          roundRevenue += slumTile.buildingProduce;
+        }
       });
+      updateResourceDisplay();
     }
-    updateResourceDisplay();
   }
 
-  /********************************************
-   * 初始化整個遊戲
-   ********************************************/
+  /* ========== 初始化地圖 ========== */
   function initMapArea() {
     mapArea.innerHTML = '<h2>地塊區（20 塊）</h2>';
     createAllTiles();
   }
   initMapArea();
 
+  /* ========== 開始遊戲、回合流程 ========== */
   function startGame() {
     startScreen.style.display = 'none';
     currentRound = 1;
-    currentGold = 0;
+    currentGold  = 0;
     roundRevenue = 0;
     updateRoundDisplay();
     updateResourceDisplay();
     window.startDrawPhase();
   }
 
-  // 回合結束：將本回合收益加至總金幣，再進入下一回合
-  endTurnBtn.addEventListener('click', function () {
+  // 回合結束
+  endTurnBtn.addEventListener('click', () => {
     currentGold += roundRevenue;
     currentRound++;
     updateRoundDisplay();
@@ -410,16 +375,14 @@ window.onload = function () {
     window.startDrawPhase();
   });
 
-  // 監聽鍵盤：在開始畫面按下 Enter
-  document.addEventListener('keydown', function (e) {
+  // 監聽鍵盤 (Enter) 開始遊戲
+  document.addEventListener('keydown', (e) => {
     if (startScreen.style.display !== 'none' && e.key === 'Enter') {
       startGame();
     }
   });
 
-  /********************************************
-   * 說明彈窗邏輯
-   ********************************************/
+  /* ========== 說明彈窗 ========== */
   infoBtn.addEventListener('click', () => {
     infoModal.style.display = 'flex';
   });
@@ -427,4 +390,3 @@ window.onload = function () {
     infoModal.style.display = 'none';
   });
 };
-
