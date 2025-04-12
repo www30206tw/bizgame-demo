@@ -16,7 +16,7 @@ body {
 .middle-section {
   display: flex;
   background: #74b9ff;
-  height: 480px; /* 加高以容納較大的地圖 */
+  height: 500px; /* 調大以容納31個地塊 */
 }
 
 .map-area {
@@ -83,6 +83,7 @@ body {
   outline: 3px solid yellow;
 }
 
+/* 建築卡的 UI 區塊 */
 .card-gold-output {
   position: absolute;
   top: 5px;
@@ -134,7 +135,7 @@ body {
   background-color: #f2f2f2;
 }
 
-/* ======= 地塊樣式 (半徑2) ======= */
+/* ======= 地塊樣式 ======= */
 .hex-tile {
   width: 80px;
   height: 80px;
@@ -151,19 +152,14 @@ body {
   align-items: center;
   font-size: 14px;
   color: #fff;
-  position: absolute; /* 絕對定位 */
+  position: absolute;
 }
 
-/* 三種地塊: #1(紫), #2~7(灰黑), #8~19(橙) */
-.city-tile {
-  background-color: #8e44ad; /* 中心紫色 */
-}
-.slum-tile {
-  background-color: #2c2c2c; /* 第一圈灰黑 */
-}
-.wasteland-tile {
-  background-color: #d4ac0d; /* 第二圈橙色 */
-}
+/* 地塊顏色：依類型顯示 */
+.wasteland-tile { background-color: #d4ac0d; } /* 荒原 */
+.slum-tile      { background-color: #2c2c2c; } /* 貧民窟 */
+.river-tile     { background-color: #2980b9; } /* 河流 */
+.city-tile      { background-color: #8e44ad; } /* 繁華區 */
 
 /* 遊戲開始畫面 */
 .start-screen {
@@ -223,16 +219,3 @@ body {
   list-style: none;
   padding: 0;
 }
-
-.tile-tag {
-  display: inline-block;
-  width: 18px;
-  height: 18px;
-  margin-right: 5px;
-  vertical-align: middle;
-}
-
-.city { background-color: #8e44ad; }
-.slum { background-color: #2c2c2c; }
-.wasteland { background-color: #d4ac0d; }
-
