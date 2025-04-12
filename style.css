@@ -7,7 +7,7 @@ body {
 /* 頂部、底部欄位 */
 .top-bar,
 .bottom-bar {
-  background: violet;
+  background: pink; /* 與原先相似顏色，可自行調整 */
   padding: 10px;
   display: flex;
   justify-content: space-between;
@@ -158,21 +158,21 @@ body {
   position: relative;
 }
 
-/* 四種地塊色系 (可依需求調整) */
+/* 四種地塊的顏色(更分明) */
 .city-tile {
-  background-color: #d63031; /* 紅色系，代表繁華區 */
+  background-color: #8e44ad; /* 繁華區：紫金色 */
 }
 
 .slum-tile {
-  background-color: #636e72; /* 灰色系，代表貧民窟 */
+  background-color: #2c2c2c; /* 貧民窟：灰黑色 */
 }
 
 .river-tile {
-  background-color: #0984e3; /* 藍色系，代表河流 */
+  background-color: #2980b9; /* 河流：藍色 */
 }
 
 .wasteland-tile {
-  background-color: #7f8c8d; /* 淺灰系，代表荒原 */
+  background-color: #d4ac0d; /* 荒原：土黃色 */
 }
 
 /* 遊戲開始畫面的樣式 */
@@ -242,20 +242,18 @@ body {
   vertical-align: middle;
 }
 
-/* 模擬小色塊，用於彈窗中的說明 */
 .city {
-  background-color: #d63031;
+  background-color: #8e44ad;
 }
 
 .slum {
-  background-color: #636e72;
+  background-color: #2c2c2c;
 }
 
 .river {
-  background-color: #0984e3;
+  background-color: #2980b9;
 }
 
 .wasteland {
-  background-color: #7f8c8d;
+  background-color: #d4ac0d;
 }
-
