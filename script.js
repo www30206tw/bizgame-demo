@@ -1,14 +1,18 @@
-// 為了避免衝突，請確保此檔案只有一份，且 index.html 只引用一次
+// 確保只有一份 script.js，避免重複宣告
 let cardIdCounter = 0;
 
 window.onload = function () {
-  /* ========== 回合資源狀態 ========== */
+  /********************************************************
+   *  1. 資源 & 狀態變數
+   ********************************************************/
   let currentRound   = 1;
-  let currentGold    = 0;
-  let roundRevenue   = 0;
-  let refreshCount   = 0;
+  let currentGold    = 0;  // 玩家金幣
+  let roundRevenue   = 0;  // 回合收益
+  let refreshCount   = 0;  // 刷新次數
 
-  /* ========== DOM 元素參考 ========== */
+  /********************************************************
+   *  2. DOM 取得
+   ********************************************************/
   const startScreen     = document.getElementById('start-screen');
   const drawSection     = document.getElementById('draw-section');
   const cardPool        = document.getElementById('card-pool');
@@ -25,234 +29,242 @@ window.onload = function () {
 
   const selectedCards   = [];
 
-  /************************************************
-   * 以「半徑 2」產生 19 塊蜂巢地塊
-   * 中心(#1): 紫色 (city-tile)
-   * 第1圈(#2~#7): 灰黑 (slum-tile)
-   * 第2圈(#8~#19): 橙色 (wasteland-tile)
-   ************************************************/
-  // 使用「Axial 座標 + 半徑2」生成所有(q,r)，距離中心(0,0) <= 2
-  // 範圍: -2 <= q <= 2, -2 <= r <= 2, 且 |q + r| <= 2
-  const radius = 2;
-  const tileData = []; // 暫存 {q, r, dist} 資訊
+  /********************************************************
+   *  3. 定義31塊地形 & 佈局
+   *     共有 6 列: 
+   *       row=0 => 5塊  (id=1..5)
+   *       row=1 => 6塊  (id=6..11)
+   *       row=2 => 7塊  (id=12..18)
+   *       row=3 => 6塊  (id=19..24)
+   *       row=4 => 5塊  (id=25..29)
+   *       row=5 => 2塊  (id=30..31)
+   *     如此合計31塊。
+   *     參考 odd-r (row=0視為偶數列) 邏輯計算鄰接。
+   ********************************************************/
+  const tileMap = createTileMap31();
 
-  for (let q = -radius; q <= radius; q++) {
-    for (let r = -radius; r <= radius; r++) {
-      const distance = hexDistance({q:0,r:0}, {q, r});
-      if (distance <= radius) {
-        tileData.push({ q, r, dist: distance });
-      }
-    }
+  // 幫每塊 tile 加上預設屬性
+  tileMap.forEach(tile => {
+    tile.buildingProduce  = 0;
+    tile.buildingPlaced   = false;
+    tile.slumBonusGranted = false;
+    tile.adjacency        = [];
+  });
+
+  // 計算 adjacency (odd-r)
+  computeAdjacency();
+
+  // 以絕對定位排版
+  initMapArea();
+
+  /********************************************************
+   *  4. 事件：開始遊戲 / 回合結束 / 說明彈窗
+   ********************************************************/
+  function startGame() {
+    startScreen.style.display = 'none';
+    currentRound = 1;
+    currentGold  = 0;
+    roundRevenue = 0;
+    updateRoundDisplay();
+    updateResourceDisplay();
+    window.startDrawPhase();
   }
-  // 依 dist 排序: dist=0 => #1, dist=1 => #2~#7, dist=2 => #8~#19
-  tileData.sort((a,b) => a.dist - b.dist);
 
-  // 給予「id 與 type」
-  // dist=0 => tile #1 => city(紫)
-  // dist=1 => tile #2~#7 => slum(灰黑)
-  // dist=2 => tile #8~#19 => wasteland(橙)
-  tileData.forEach((t, idx) => {
-    t.id         = idx + 1; 
-    t.buildingProduce   = 0;
-    t.buildingPlaced    = false;
-    t.slumBonusGranted  = false;
-    if (t.dist === 0) {
-      t.type = 'city'; 
-    } else if (t.dist === 1) {
-      t.type = 'slum';
-    } else {
-      t.type = 'wasteland';
+  document.addEventListener('keydown', (e) => {
+    // 同時偵測 Enter / NumpadEnter
+    if (startScreen.style.display !== 'none' && 
+       (e.key === 'Enter' || e.key === 'NumpadEnter')) {
+      startGame();
     }
   });
 
-  // 計算鄰接: 透過 axial 6 方向
-  const axialDirs = [
-    { dq: +1, dr: 0 },
-    { dq: +1, dr: -1 },
-    { dq: 0,  dr: -1 },
-    { dq: -1, dr: 0 },
-    { dq: -1, dr: +1 },
-    { dq: 0,  dr: +1 },
-  ];
-  tileData.forEach((tile) => {
-    tile.adjacency = [];
-    axialDirs.forEach(d => {
-      const nq = tile.q + d.dq;
-      const nr = tile.r + d.dr;
-      const neighbor = tileData.find(tt => tt.q === nq && tt.r === nr);
-      if (neighbor) {
-        tile.adjacency.push(neighbor.id);
-      }
+  endTurnBtn.addEventListener('click', () => {
+    // 回合結束 => 將 roundRevenue 累加到 currentGold
+    currentGold += roundRevenue;
+    currentRound++;
+    updateRoundDisplay();
+    updateResourceDisplay();
+    window.startDrawPhase();
+  });
+
+  infoBtn.addEventListener('click', () => {
+    infoModal.style.display = 'flex';
+  });
+  closeInfoBtn.addEventListener('click', () => {
+    infoModal.style.display = 'none';
+  });
+
+  /********************************************************
+   *  5. 抽卡邏輯：5 選 1
+   ********************************************************/
+  function drawCards() {
+    cardPool.innerHTML = '';
+    const possibleBuildings = ["建築A","建築B","建築C","建築D","建築E"];
+    const shuffled = shuffle(possibleBuildings.slice());
+    // 只取5張
+    const drawn = shuffled.slice(0, 5);
+
+    drawn.forEach((bName) => {
+      const card = createBuildingCard(bName);
+      card.onclick = () => {
+        // 選卡(一次只能選1)
+        if (selectedCards.includes(card)) {
+          card.classList.remove('selected');
+          selectedCards.splice(selectedCards.indexOf(card), 1);
+        } else {
+          // 先清空其他選取
+          selectedCards.forEach(c => c.classList.remove('selected'));
+          selectedCards.length = 0;
+
+          card.classList.add('selected');
+          selectedCards.push(card);
+        }
+      };
+      cardPool.appendChild(card);
     });
-  });
-
-  // 將 tileData 存入全域 array
-  const tileMap = tileData;
-
-  // 以下將 axial 座標轉成實際 (x, y) 以絕對定位
-  // 這裡選擇 pointy-top hex 佈局 => offsetX, offsetY 計算可參考
-  // https://www.redblobgames.com/grids/hexagons/#coordinates-offset
-  // 為讓整個圖形在地圖中央，可以先計算 bbox，再置中。
-  const tileWidth  = 80;
-  const tileHeight = 80;
-
-  // pointy-top 轉換 (q,r) => (x,y)
-  function axialToPixel(q, r) {
-    // pointy-top axial
-    const x = tileWidth * (Math.sqrt(3) * (q + r/2));
-    const y = tileHeight * (3/4 * r);
-    return { x, y };
   }
 
-  // 找出最小與最大 x, y 用於置中
-  const coords = tileMap.map(t => {
-    const {x, y} = axialToPixel(t.q, t.r);
-    return { id:t.id, x, y, dist:t.dist, type:t.type, adjacency:t.adjacency };
-  });
-  const minX = Math.min(...coords.map(c => c.x));
-  const maxX = Math.max(...coords.map(c => c.x));
-  const minY = Math.min(...coords.map(c => c.y));
-  const maxY = Math.max(...coords.map(c => c.y));
-
-  // 讓中心 tile( dist=0 )盡量置中 mapArea
-  // 先計算圖形寬高
-  const shapeWidth  = maxX - minX + tileWidth;
-  const shapeHeight = maxY - minY + tileHeight;
-  // 取地圖容器一半 - 圖形寬度/2
-  // 由於 mapArea 大小不一定，我們抓一個大概 => clientWidth/Height
-  const centerOffsetX = mapArea.clientWidth/2  - shapeWidth/2;
-  const centerOffsetY = mapArea.clientHeight/2 - shapeHeight/2;
-
-  // 建立 hex-tile DOM
-  coords.forEach((c) => {
-    const hex = document.createElement('div');
-    hex.className = 'hex-tile';
-    if (c.type === 'city') {
-      hex.classList.add('city-tile');
-    } else if (c.type === 'slum') {
-      hex.classList.add('slum-tile');
-    } else {
-      // dist=2 => wasteland(橙)
-      hex.classList.add('wasteland-tile');
+  window.refreshCards = function() {
+    const cost = 2 * (refreshCount + 1);
+    if (currentGold < cost) {
+      alert("金幣不足，無法刷新卡牌!");
+      return;
     }
+    currentGold -= cost;
+    refreshCount++;
+    updateResourceDisplay();
+    updateRefreshButton();
 
-    hex.dataset.tileId = c.id;
-    hex.textContent = '?';
-    // 絕對定位: 加上置中偏移
-    const px = c.x - minX + centerOffsetX;
-    const py = c.y - minY + centerOffsetY;
-    hex.style.left = px + 'px';
-    hex.style.top  = py + 'px';
+    selectedCards.length = 0;
+    drawCards();
+  };
 
-    // 拖曳處理
-    hex.ondragover = (e) => e.preventDefault();
-    hex.ondrop = (e) => {
-      e.preventDefault();
-      const cardId = e.dataTransfer.getData('cardId');
-      const cardElem = hand.querySelector(`[data-card-id="${cardId}"]`);
-      if (!cardElem) return;
-      placeBuildingOnTile(c.id, cardElem);
-    };
-    mapArea.appendChild(hex);
-  });
+  window.skipDraw = function() {
+    currentGold += 10;
+    updateResourceDisplay();
+    drawSection.style.display = 'none';
+  };
 
-  /**
-   * 以上已完成 19 塊蜂巢地塊，
-   * tileMap[] 內存有 (id, dist, type, q, r, adjacency, ...)
-   */
-
-  /* ========== 工具函式：Axial 距離 ========== */
-  function hexDistance(a, b) {
-    // axial => cube => distance
-    // 參考: https://www.redblobgames.com/grids/hexagons/#distances-axial
-    const a3 = axialToCube(a.q, a.r);
-    const b3 = axialToCube(b.q, b.r);
-    return (Math.abs(a3.x - b3.x) + Math.abs(a3.y - b3.y) + Math.abs(a3.z - b3.z)) / 2;
-  }
-  function axialToCube(q, r) {
-    const x = q;
-    const z = r;
-    const y = -x - z;
-    return { x, y, z };
-  }
-
-  /* ========== 放置建築並計算產能 ========== */
-  function placeBuildingOnTile(tileId, cardElem) {
-    const tileObj = tileMap.find(t => t.id === tileId);
-    if (!tileObj) return;
-
-    // 若該地塊已有建築，先移除舊的產出
-    if (tileObj.buildingPlaced) {
-      roundRevenue -= tileObj.buildingProduce;
-      tileObj.buildingProduce   = 0;
-      tileObj.slumBonusGranted  = false;
+  window.confirmDraw = function() {
+    // 選取卡牌 < 1 => 提示
+    if (selectedCards.length < 1) {
+      alert("請至少選擇 1 張卡牌！");
+      return;
     }
+    selectedCards.forEach((c) => {
+      const copy = createBuildingCard(c.querySelector('.card-name').innerText);
+      hand.appendChild(copy);
+    });
+    drawSection.style.display = 'none';
+  };
 
+  window.startDrawPhase = function() {
+    refreshCount = 0;
+    selectedCards.length = 0;
+    updateRefreshButton();
+    drawSection.style.display = 'flex';
+    drawCards();
+  };
+
+  /********************************************************
+   *  6. 建立建築卡
+   ********************************************************/
+  function createBuildingCard(buildingName) {
+    const produceAmount = 6;
+    const rarity        = "普通";
+    const card          = document.createElement('div');
+    card.className      = 'card';
+    card.dataset.type   = 'building';
+    card.dataset.produce= produceAmount;
+    card.dataset.cardId = ++cardIdCounter;
+    card.draggable      = true;
+
+    card.innerHTML = `
+      <div class="card-gold-output">${produceAmount}</div>
+      <div class="card-image-area"></div>
+      <div class="card-name">${buildingName}</div>
+      <div class="card-rarity">${rarity}</div>
+      <div class="card-ability"></div>
+    `;
+    card.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('cardId', card.dataset.cardId);
+      e.dataTransfer.setData('text/plain', buildingName);
+    });
+    return card;
+  }
+
+  /********************************************************
+   *  7. 放置建築 & 加成
+   ********************************************************/
+  function placeBuildingOnTile(tile, cardElem) {
+    // 若該地塊已有建築 => 先扣除
+    if (tile.buildingPlaced) {
+      roundRevenue -= tile.buildingProduce;
+      tile.buildingProduce  = 0;
+      tile.slumBonusGranted = false;
+    }
     // 基礎產量
     let produceVal = parseInt(cardElem.dataset.produce) || 6;
-    // 若是 city => +2
-    if (tileObj.type === 'city') {
-      produceVal += 2;
-    }
-    // 若是 river => -1 (本示例中未出現，但可自行擴充)
-    // 若是 slum => 後面再檢查相連 +1
-    tileObj.buildingProduce = produceVal;
-    tileObj.buildingPlaced  = true;
+    // 類型加減成
+    if (tile.type === 'city')  produceVal += 2;
+    if (tile.type === 'river') produceVal -= 1;
+    
+    tile.buildingProduce = produceVal;
+    tile.buildingPlaced  = true;
 
-    // 在畫面顯示卡名
-    const hexEl = mapArea.querySelector(`[data-tile-id="${tileId}"]`);
+    // 顯示在介面
+    const hexEl = mapArea.querySelector(`[data-tile-id="${tile.id}"]`);
     hexEl.textContent = cardElem.querySelector('.card-name').innerText;
 
-    // 從手排移除
+    // 移除卡牌
     cardElem.remove();
 
-    // 若是貧民窟 => 檢查相連 +1
-    if (tileObj.type === 'slum') {
-      checkSlumClusterAndAddBonus(tileObj.id);
+    // 貧民窟檢查
+    if (tile.type === 'slum') {
+      checkSlumClusterAndAddBonus(tile.id);
     }
-
-    // 加回本回合收益
-    roundRevenue += tileObj.buildingProduce;
+    // 更新回合收益
+    roundRevenue += tile.buildingProduce;
     updateResourceDisplay();
   }
 
-  /* ========== 貧民窟 3 塊相連 => +1 ========== */
   function checkSlumClusterAndAddBonus(startId) {
     const visited = new Set();
-    const queue = [startId];
+    const queue   = [startId];
     const cluster = [];
     while (queue.length > 0) {
-      const currId = queue.shift();
-      if (visited.has(currId)) continue;
-      visited.add(currId);
+      const curr = queue.shift();
+      if (visited.has(curr)) continue;
+      visited.add(curr);
 
-      const t = tileMap.find(x => x.id === currId);
+      const t = tileMap.find(x => x.id === curr);
       if (t && t.type === 'slum' && t.buildingPlaced) {
-        cluster.push(currId);
-        t.adjacency.forEach(nbId => {
-          const nbTile = tileMap.find(x => x.id === nbId);
-          if (!visited.has(nbId) && nbTile && nbTile.type === 'slum' && nbTile.buildingPlaced) {
-            queue.push(nbId);
+        cluster.push(curr);
+        t.adjacency.forEach(nbID => {
+          const nbTile = tileMap.find(x => x.id === nbID);
+          if (!visited.has(nbID) && nbTile && nbTile.type === 'slum' && nbTile.buildingPlaced) {
+            queue.push(nbID);
           }
         });
       }
     }
-    // 若 >=3 個相連的 slum => 為未加成的建築 +1
     if (cluster.length >= 3) {
       cluster.forEach(cid => {
-        const slumTile = tileMap.find(x => x.id === cid);
-        if (!slumTile.slumBonusGranted) {
-          roundRevenue -= slumTile.buildingProduce;
-          slumTile.buildingProduce += 1;
-          slumTile.slumBonusGranted = true;
-          roundRevenue += slumTile.buildingProduce;
+        const st = tileMap.find(x => x.id === cid);
+        if (!st.slumBonusGranted) {
+          roundRevenue -= st.buildingProduce;
+          st.buildingProduce += 1;
+          st.slumBonusGranted = true;
+          roundRevenue += st.buildingProduce;
         }
       });
       updateResourceDisplay();
     }
   }
 
-  /* ========== 抽卡 & 回合機制 與以往相同 ========== */
+  /********************************************************
+   *  8. UI 更新：回合/資源
+   ********************************************************/
   function updateRoundDisplay() {
     roundNumberElem.innerText = currentRound;
   }
@@ -265,94 +277,168 @@ window.onload = function () {
     refreshBtn.textContent = `刷新卡片(${cost} 金幣)`;
   }
 
-  // 抽卡
-  function drawCards() {
-    cardPool.innerHTML = '';
-    const possibleBuildings = ["建築A","建築B","建築C","建築D","建築E"];
-    const arr = shuffle(possibleBuildings.slice()).slice(0, 5);
-    arr.forEach((bName) => {
-      const card = createBuildingCard(bName);
-      card.onclick = () => {
-        if (selectedCards.includes(card)) {
-          card.classList.remove('selected');
-          selectedCards.splice(selectedCards.indexOf(card), 1);
-        } else if (selectedCards.length < 2) {
-          card.classList.add('selected');
-          selectedCards.push(card);
+  /********************************************************
+   *  9. 生成 31 塊地塊：row, col, id, type
+   *     6 列: (row=0: 1..5), (row=1: 6..11), ...
+   ********************************************************/
+  function createTileMap31(){
+    // 依需求定義 row, col => id => type
+    // row=0 => col=0..4 => id=1..5
+    // row=1 => col=0..5 => id=6..11
+    // row=2 => col=0..6 => id=12..18
+    // row=3 => col=0..5 => id=19..24
+    // row=4 => col=0..4 => id=25..29
+    // row=5 => col=0..1 => id=30..31
+    // 共31塊
+    const data = [
+      // row=0 (5 tiles)
+      {id:1,type:'wasteland',row:0,col:0},
+      {id:2,type:'wasteland',row:0,col:1},
+      {id:3,type:'wasteland',row:0,col:2},
+      {id:4,type:'wasteland',row:0,col:3},
+      {id:5,type:'wasteland',row:0,col:4},
+
+      // row=1 (6 tiles => id=6..11)
+      {id:6, type:'slum',     row:1,col:0},
+      {id:7, type:'slum',     row:1,col:1},
+      {id:8, type:'wasteland',row:1,col:2},
+      {id:9, type:'river',    row:1,col:3},
+      {id:10,type:'slum',     row:1,col:4},
+      {id:11,type:'city',     row:1,col:5},
+
+      // row=2 (7 tiles => id=12..18)
+      {id:12,type:'slum',     row:2,col:0},
+      {id:13,type:'river',    row:2,col:1},
+      {id:14,type:'slum',     row:2,col:2},
+      {id:15,type:'city',     row:2,col:3},
+      {id:16,type:'city',     row:2,col:4},
+      {id:17,type:'river',    row:2,col:5},
+      {id:18,type:'wasteland',row:2,col:6},
+
+      // row=3 (6 tiles => id=19..24)
+      {id:19,type:'slum',     row:3,col:0},
+      {id:20,type:'slum',     row:3,col:1},
+      {id:21,type:'river',    row:3,col:2},
+      {id:22,type:'wasteland',row:3,col:3},
+      {id:23,type:'wasteland',row:3,col:4},
+      {id:24,type:'slum',     row:3,col:5},
+
+      // row=4 (5 tiles => id=25..29)
+      {id:25,type:'river',    row:4,col:0},
+      {id:26,type:'wasteland',row:4,col:1},
+      {id:27,type:'wasteland',row:4,col:2},
+      {id:28,type:'wasteland',row:4,col:3},
+      {id:29,type:'river',    row:4,col:4},
+
+      // row=5 (2 tiles => id=30..31)
+      {id:30,type:'wasteland',row:5,col:0},
+      {id:31,type:'wasteland',row:5,col:5},
+    ];
+    return data;
+  }
+
+  /********************************************************
+   * 10. 計算 adjacency (odd-r)
+   *     row=0 視為偶數列, row=1為奇數列, 依此類推
+   ********************************************************/
+  function computeAdjacency(){
+    // odd-r offset hex
+    const directionsEven = [ // row為偶數 => row=0,2,4 => col不偏移
+      { dr:-1, dc:0 },
+      { dr:-1, dc:1 },
+      { dr:0,  dc:-1},
+      { dr:0,  dc:1 },
+      { dr:1,  dc:0 },
+      { dr:1,  dc:1 }
+    ];
+    const directionsOdd  = [ // row為奇數 => row=1,3,5 => col向左偏移
+      { dr:-1, dc:-1 },
+      { dr:-1, dc:0 },
+      { dr:0,  dc:-1 },
+      { dr:0,  dc:1  },
+      { dr:1,  dc:-1 },
+      { dr:1,  dc:0  }
+    ];
+
+    tileMap.forEach(tile => {
+      const isEvenRow = (tile.row % 2 === 0);
+      const dirSet    = isEvenRow ? directionsEven : directionsOdd;
+      dirSet.forEach(d => {
+        const nr = tile.row + d.dr;
+        const nc = tile.col + d.dc;
+        const neighbor = tileMap.find(t => t.row === nr && t.col === nc);
+        if (neighbor) {
+          tile.adjacency.push(neighbor.id);
         }
+      });
+    });
+  }
+
+  /********************************************************
+   * 11. 將 31 塊絕對定位在地圖中央
+   ********************************************************/
+  function initMapArea(){
+    mapArea.innerHTML = '';
+    // tileWidth=80, tileHeight=80
+    // odd-r 佈局: row偶數 => col無偏移, row奇數 => col offsetX
+    const tileWidth  = 80;
+    const tileHeight = 80;
+    const verticalSpacing = tileHeight * 0.75; 
+    const offsetX = tileWidth / 2; 
+
+    // 先找 row, col 的最小最大
+    let minX= Infinity, maxX= -Infinity;
+    let minY= Infinity, maxY= -Infinity;
+
+    // 暫存計算好的 (x,y)
+    const tileCoords = tileMap.map(tile => {
+      const isEvenRow = (tile.row % 2 === 0);
+      // x= col * tileWidth + (row奇數? offsetX:0)
+      const x = tile.col * tileWidth + (isEvenRow ? 0 : offsetX);
+      const y = tile.row * verticalSpacing;
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
+      return {...tile, x, y};
+    });
+
+    // 置中 => 取 mapArea.clientWidth/Height
+    const mapW = mapArea.clientWidth;
+    const mapH = mapArea.clientHeight;
+    const shapeWidth  = maxX - minX + tileWidth;
+    const shapeHeight = maxY - minY + tileHeight;
+    const offsetCenterX = (mapW - shapeWidth) / 2;
+    const offsetCenterY = (mapH - shapeHeight) / 2;
+
+    tileCoords.forEach(c => {
+      const hex = document.createElement('div');
+      hex.className = 'hex-tile';
+      // 顏色
+      if      (c.type === 'wasteland') hex.classList.add('wasteland-tile');
+      else if (c.type === 'slum')      hex.classList.add('slum-tile');
+      else if (c.type === 'river')     hex.classList.add('river-tile');
+      else if (c.type === 'city')      hex.classList.add('city-tile');
+
+      hex.dataset.tileId = c.id;
+      hex.textContent    = '?';
+
+      const px = c.x - minX + offsetCenterX;
+      const py = c.y - minY + offsetCenterY;
+      hex.style.left = px + 'px';
+      hex.style.top  = py + 'px';
+
+      // 拖曳
+      hex.ondragover = e => e.preventDefault();
+      hex.ondrop = e => {
+        e.preventDefault();
+        const cardId = e.dataTransfer.getData('cardId');
+        const cardElem = hand.querySelector(`[data-card-id="${cardId}"]`);
+        if (!cardElem) return;
+        placeBuildingOnTile(c, cardElem);
       };
-      cardPool.appendChild(card);
+
+      mapArea.appendChild(hex);
     });
   }
-  window.refreshCards = function () {
-    const cost = 2 * (refreshCount + 1);
-    if (currentGold < cost) {
-      alert("金幣不足，無法刷新卡牌!");
-      return;
-    }
-    currentGold -= cost;
-    refreshCount++;
-    updateResourceDisplay();
-    updateRefreshButton();
-    selectedCards.length = 0;
-    drawCards();
-  };
-  window.skipDraw = function () {
-    currentGold += 10;
-    updateResourceDisplay();
-    drawSection.style.display = 'none';
-  };
-  window.confirmDraw = function () {
-    if (selectedCards.length < 2) {
-      alert("請至少選擇 2 張卡牌！");
-      return;
-    }
-    selectedCards.forEach((c) => {
-      const copy = createBuildingCard(c.querySelector('.card-name').innerText);
-      hand.appendChild(copy);
-    });
-    drawSection.style.display = 'none';
-  };
-  window.startDrawPhase = function () {
-    refreshCount = 0;
-    selectedCards.length = 0;
-    updateRefreshButton();
-    drawSection.style.display = 'flex';
-    drawCards();
-  };
-
-  // 初始化
-  function startGame() {
-    startScreen.style.display = 'none';
-    currentRound = 1;
-    currentGold  = 0;
-    roundRevenue = 0;
-    updateRoundDisplay();
-    updateResourceDisplay();
-    window.startDrawPhase();
-  }
-
-  endTurnBtn.addEventListener('click', () => {
-    currentGold += roundRevenue;
-    currentRound++;
-    updateRoundDisplay();
-    updateResourceDisplay();
-    window.startDrawPhase();
-  });
-
-  document.addEventListener('keydown', (e) => {
-    if (startScreen.style.display !== 'none' && (e.key === 'Enter' || e.key === 'NumpadEnter')) {
-      startGame();
-    }
-  });
-
-  infoBtn.addEventListener('click', () => {
-    infoModal.style.display = 'flex';
-  });
-  closeInfoBtn.addEventListener('click', () => {
-    infoModal.style.display = 'none';
-  });
 };
-
-/* ========== 其餘段落(如特效)可自行擴充 ========== */
-
