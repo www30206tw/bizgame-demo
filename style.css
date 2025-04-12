@@ -16,16 +16,13 @@ body {
 .middle-section {
   display: flex;
   background: #74b9ff;
-  height: 380px; /* 加高以容納較大的地圖 */
+  height: 460px; /* 加高以容納更大的地圖佈局 */
 }
 
 .map-area {
   flex: 1;
-  padding: 20px;
-  display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  position: relative;
+  position: relative; /* 讓絕對定位的 hex 可以自由放置 */
+  margin: 20px;       /* 與邊界保留一些空間 */
 }
 
 .sidebar {
@@ -141,7 +138,6 @@ body {
 .hex-tile {
   width: 80px;
   height: 80px;
-  margin: 0 5px 5px 0; /* 適度縮小間距 */
   clip-path: polygon(
     50% 0%,
     93% 25%,
@@ -155,10 +151,10 @@ body {
   align-items: center;
   font-size: 14px;
   color: #fff;
-  position: relative;
+  position: absolute; /* 改用絕對定位來手動排列 */
 }
 
-/* 四種地塊的顏色(更分明) */
+/* 四種地塊的顏色 */
 .city-tile {
   background-color: #8e44ad; /* 繁華區：紫金色 */
 }
