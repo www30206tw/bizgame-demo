@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Hex Radius 2 DEMO</title>
+    <title>Demo: 31 Tiles</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -28,7 +28,8 @@
     <!-- 抽卡區塊 -->
     <div id="draw-section">
       <div class="draw-box">
-        <h2>抽卡階段：請從以下卡片中選擇 2 張</h2>
+        <!-- 這裡改成「請從以下卡片中選擇 1 張」 -->
+        <h2>抽卡階段：請從以下卡片中選擇 1 張</h2>
         <div class="card-pool" id="card-pool"></div>
         <div class="draw-buttons">
           <button id="refresh-btn" onclick="refreshCards()">刷新卡片(2 金幣)</button>
@@ -43,7 +44,6 @@
       <div class="sidebar">
         <button disabled>科技樹</button>
       </div>
-      <!-- 地塊容器 -->
       <div class="map-area" id="map-area"></div>
       <div class="sidebar">
         <button id="info-btn">說明</button>
@@ -61,11 +61,12 @@
       <div class="info-content">
         <h2>地塊說明</h2>
         <ul>
-          <li><span class="tile-tag city"></span> 中心地塊 (#1)：紫色</li>
-          <li><span class="tile-tag slum"></span> 第一圈地塊 (#2~#7)：灰黑色</li>
-          <li><span class="tile-tag wasteland"></span> 第二圈地塊 (#8~#19)：橙色</li>
+          <li>荒原：無加成</li>
+          <li>貧民窟：若 3 塊相連都蓋建築，各多 +1</li>
+          <li>河流：建築產出 -1</li>
+          <li>繁華區：建築產出 +2</li>
         </ul>
-        <p>可依需求額外替換科技卡、建築卡、或加入更多地形。此為半徑2的標準蜂巢。</p>
+        <p>共 31 塊地塊，已依附檔指定之 ID & 類型排列。</p>
         <button id="close-info-btn">關閉</button>
       </div>
     </div>
@@ -73,4 +74,3 @@
     <script src="script.js" defer></script>
   </body>
 </html>
-
