@@ -26,21 +26,14 @@ window.onload = function () {
   const closeInfoBtn    = document.getElementById('close-info-btn');
 
   // 暫存本回合選取的卡牌 DOM
-  const selectedCards = [];
+  const selectedCards   = [];
 
   /* ========== 地塊資料(4×5=20) ========== */
-  //   需求： 
-  //   - 3 塊繁華區相鄰 (city)
-  //   - 5 塊貧民窟 (slum) 相連
-  //   - 4 塊河流(river) 連成一線
-  //   - 其餘為荒原 (wasteland)
-  //
-  //   這裡預先手動配置，並在 BFS 中做「odd-r 偏移」計算相鄰。
-  //
-  //   row=0: (0,0) (0,1) (0,2) (0,3) (0,4)
-  //   row=1: (1,0) (1,1) (1,2) (1,3) (1,4)
-  //   row=2: (2,0) (2,1) (2,2) (2,3) (2,4)
-  //   row=3: (3,0) (3,1) (3,2) (3,3) (3,4)
+  //   仍沿用先前分配：繁華區、貧民窟、河流、荒原
+  //   row=0: (0,0) (0,1) ... (0,4)
+  //   row=1: (1,0) (1,1) ... (1,4)
+  //   row=2: (2,0) (2,1) ... (2,4)
+  //   row=3: (3,0) (3,1) ... (3,4)
   const tileMap = [
     // row0
     { row:0, col:0, type:'wasteland' },
@@ -76,9 +69,16 @@ window.onload = function () {
     t.id                = idx;
     t.buildingProduce   = 0;   // 當前建築產出
     t.buildingPlaced    = false;
-    t.slumBonusGranted  = false; // 避免重複加貧民窟 +1
+    t.slumBonusGranted  = false; 
     t.adjacency         = [];
   });
+
+  /* ========== Hex Layout 參數 ========== */
+  const tileWidth  = 80;
+  const tileHeight = 80;
+  const verticalSpacing = tileHeight * 0.75; // 60
+  // odd row (row=1,3,...) 的 x 偏移
+  const offsetX = tileWidth / 2; // 40
 
   /* ========== 計算 Hex 格狀鄰接(odd-r) ========== */
   function inBounds(r, c) {
@@ -86,7 +86,6 @@ window.onload = function () {
   }
 
   function computeAdjacency() {
-    // odd-r 偏移 hex，相鄰方向定義
     const directionsEven = [
       { dr: -1, dc: 0 },
       { dr: -1, dc: +1 },
@@ -107,7 +106,7 @@ window.onload = function () {
     tileMap.forEach((tile) => {
       const { row, col } = tile;
       const isEvenRow = (row % 2 === 0);
-      const dirSet = isEvenRow ? directionsEven : directionsOdd;
+      const dirSet    = isEvenRow ? directionsEven : directionsOdd;
 
       dirSet.forEach(d => {
         const nr = row + d.dr;
@@ -140,9 +139,9 @@ window.onload = function () {
 
   /* ========== 卡牌生成 (建築) ========== */
   function createBuildingCard(buildingName) {
-    const produceAmount = 6;  // 基礎產出
+    const produceAmount = 6;  
     const rarity        = "普通";
-    const card = document.createElement('div');
+    const card          = document.createElement('div');
     card.className      = 'card';
     card.dataset.type   = 'building';
     card.dataset.produce= produceAmount;
@@ -236,7 +235,7 @@ window.onload = function () {
     drawCards();
   };
 
-  /* ========== 建立地塊並渲染 ========== */
+  /* ========== 建立地塊並渲染(絕對定位) ========== */
   function createAllTiles() {
     tileMap.forEach((tile) => {
       const hex = document.createElement('div');
@@ -248,8 +247,18 @@ window.onload = function () {
       else if (tile.type === 'river')     hex.classList.add('river-tile');
       else                                hex.classList.add('wasteland-tile');
 
-      hex.textContent = '?';  // 可改成 tile.type 以利除錯
+      hex.textContent = '?';  // 也可改成 tile.type 
       hex.dataset.tileId = tile.id;
+
+      // 計算絕對座標
+      // row = tile.row, col = tile.col
+      // X 座標 = col * tileWidth + (如果是奇數列 => + offsetX)
+      // Y 座標 = row * verticalSpacing
+      const isOddRow = (tile.row % 2 === 1);
+      const x = tile.col * tileWidth + (isOddRow ? offsetX : 0);
+      const y = tile.row * verticalSpacing;
+      hex.style.left = x + 'px';
+      hex.style.top  = y + 'px';
 
       // 拖曳放置
       hex.ondragover = (e) => e.preventDefault();
@@ -271,7 +280,7 @@ window.onload = function () {
     if (tile.buildingPlaced) {
       roundRevenue -= tile.buildingProduce;
       tile.buildingProduce   = 0;
-      tile.slumBonusGranted  = false; // 覆蓋建築後，重置貧民窟加成狀態
+      tile.slumBonusGranted  = false;
     }
 
     // 建築基礎產出
@@ -289,29 +298,27 @@ window.onload = function () {
     tile.buildingProduce = produceVal;
     tile.buildingPlaced  = true;
 
-    // 更新畫面：在地塊上顯示卡牌名稱
+    // 更新文字顯示
     const thisHex = mapArea.querySelector(`[data-tile-id="${tile.id}"]`);
     thisHex.textContent = cardElem.querySelector('.card-name').innerText;
 
     // 手排移除該卡
     cardElem.remove();
 
-    // 若是貧民窟，就檢查是否形成 3(含)以上相連
-    // 只對尚未加成的建築進行 +1
+    // 若是貧民窟 => 檢查相連
     if (tile.type === 'slum') {
       checkSlumClusterAndAddBonus(tile.id);
     }
 
-    // 最後把計算完的建築產值加入回合收益
+    // 加入 roundRevenue
     roundRevenue += tile.buildingProduce;
     updateResourceDisplay();
   }
 
   /* ========== 判斷貧民窟相連：若>=3，+1 ========== */
   function checkSlumClusterAndAddBonus(startId) {
-    // BFS：找出與 startId 同樣是 slum、有建築的相連集合
     const visited = new Set();
-    const queue = [startId];
+    const queue   = [startId];
     const cluster = [];
 
     while (queue.length > 0) {
@@ -336,11 +343,10 @@ window.onload = function () {
     if (cluster.length >= 3) {
       cluster.forEach(cid => {
         const slumTile = tileMap[cid];
-        // 若該地塊尚未加成過 => 加 1
         if (!slumTile.slumBonusGranted) {
           roundRevenue -= slumTile.buildingProduce;
           slumTile.buildingProduce += 1;
-          slumTile.slumBonusGranted = true; // 避免重複加
+          slumTile.slumBonusGranted = true;
           roundRevenue += slumTile.buildingProduce;
         }
       });
@@ -348,14 +354,13 @@ window.onload = function () {
     }
   }
 
-  /* ========== 初始化地圖 ========== */
+  /* ========== 初始化地塊 + 遊戲流程 ========== */
   function initMapArea() {
-    mapArea.innerHTML = '<h2>地塊區（20 塊）</h2>';
+    mapArea.innerHTML = ''; // 移除地塊區(20塊)文字
     createAllTiles();
   }
   initMapArea();
 
-  /* ========== 開始遊戲、回合流程 ========== */
   function startGame() {
     startScreen.style.display = 'none';
     currentRound = 1;
