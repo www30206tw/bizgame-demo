@@ -346,8 +346,11 @@ newCard.addEventListener('dragend', e => {
       tile.buildingProduce = 0;
       tile.slumBonusGranted = false;
     }
-    let produceVal = parseInt(cardElem.dataset.produce) || 6;
-if(tile.type === 'city') {
+    tile.buildingBaseProduce = parseInt(cardElem.dataset.produce) || 6;
+    tile.buildingLabel = cardElem.dataset.label || "";
+    // 接著依據地塊計算產出
+    let produceVal = tile.buildingBaseProduce;
+    if(tile.type === 'city') {
     produceVal += 2; // 調整城市地塊基礎效果為 +2
     // 如果建築標籤為「繁華區」，額外增加 +4
     if(cardElem.dataset.label === '繁華區'){
