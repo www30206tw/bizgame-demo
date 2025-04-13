@@ -1,16 +1,13 @@
-/****************************
- * script.js (建築標籤版)
- ****************************/
+// 回合＆資源
 let cardIdCounter = 0;
 
-window.onload = function() {
-  // 遊戲狀態
-  let currentRound = 1;
-  let currentGold = 0;
-  let roundRevenue = 0;
-  let refreshCount = 0;
+window.onload = function(){
+  let currentRound   = 1;
+  let currentGold    = 0; 
+  let roundRevenue   = 0; 
+  let refreshCount   = 0;
 
-  // DOM
+  // DOM 參考
   const startScreen     = document.getElementById('start-screen');
   const drawSection     = document.getElementById('draw-section');
   const cardPool        = document.getElementById('card-pool');
@@ -25,49 +22,50 @@ window.onload = function() {
   const infoModal       = document.getElementById('info-modal');
   const closeInfoBtn    = document.getElementById('close-info-btn');
 
-  const selectedCards   = [];
+  const selectedCards = [];
 
-  /*************************
-   * 建立 31 塊地塊 (7行)
-   *************************/
+  /********************
+   * 建立31塊地塊
+   ********************/
   function createTileMap31(){
-    const rows = [4,5,4,5,4,5,4];
-    const typeMapping = {
-      1:'wasteland', 2:'wasteland',3:'wasteland',4:'wasteland',
+    const rows=[4,5,4,5,4,5,4];
+    const typeMapping={
+      1:'wasteland',2:'wasteland',3:'wasteland',4:'wasteland',
       5:'wasteland',6:'slum',7:'slum',8:'wasteland',9:'river',10:'slum',
       11:'city',12:'slum',13:'river',14:'slum',15:'city',16:'city',
       17:'river',18:'wasteland',19:'slum',20:'slum',21:'river',22:'wasteland',
       23:'wasteland',24:'slum',25:'river',26:'wasteland',27:'wasteland',28:'wasteland',29:'river',
       30:'wasteland',31:'wasteland'
     };
-    const tiles=[];
+    let tileMap=[];
     let idCounter=1;
     for(let r=0;r<rows.length;r++){
       const count=rows[r];
       for(let c=0;c<count;c++){
-        tiles.push({
+        tileMap.push({
           id:idCounter,
           row:r,
           col:c,
           type:typeMapping[idCounter],
           buildingProduce:0,
           buildingPlaced:false,
-          adjacency:[],
-          x:0,y:0, // 絕對定位
-          label:"",
+          slumBonusGranted:false, 
+          adjacency:[]
         });
         idCounter++;
       }
     }
-    return tiles;
+    return tileMap;
   }
-  let tileMap = createTileMap31();
+  let tileMap=createTileMap31();
 
-  // odd-r offset adjacency
-  const directionsEven = [
+  /********************
+   * odd-r offset adjacency
+   ********************/
+  const directionsEven=[
     {dr:-1,dc:0},{dr:-1,dc:1},{dr:0,dc:-1},{dr:0,dc:1},{dr:1,dc:0},{dr:1,dc:1}
   ];
-  const directionsOdd = [
+  const directionsOdd=[
     {dr:-1,dc:-1},{dr:-1,dc:0},{dr:0,dc:-1},{dr:0,dc:1},{dr:1,dc:-1},{dr:1,dc:0}
   ];
   function computeAdjacency(){
@@ -85,22 +83,26 @@ window.onload = function() {
   }
   computeAdjacency();
 
-  // 絕對定位 & 置中
+  /********************
+   * 絕對定位 (簡化)
+   ********************/
   function initMapArea(){
     mapArea.innerHTML='';
     const tileWidth=80, tileHeight=80;
     const verticalSpacing=tileHeight*0.75;
     const offsetX=tileWidth/2;
     let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
-    tileMap.forEach(t=>{
-      const shiftLeft=(t.row%2===1);
-      t.x = t.col*tileWidth+(shiftLeft? -offsetX:0);
-      t.y = t.row*verticalSpacing;
-      minX=Math.min(minX,t.x);
-      maxX=Math.max(maxX,t.x);
-      minY=Math.min(minY,t.y);
-      maxY=Math.max(maxY,t.y);
+
+    tileMap.forEach(tile=>{
+      const shiftLeft=(tile.row%2===1);
+      tile.x = tile.col*tileWidth + (shiftLeft? -offsetX:0);
+      tile.y = tile.row*verticalSpacing;
+      minX=Math.min(minX,tile.x);
+      maxX=Math.max(maxX,tile.x);
+      minY=Math.min(minY,tile.y);
+      maxY=Math.max(maxY,tile.y);
     });
+
     const shapeW=maxX-minX+tileWidth;
     const shapeH=maxY-minY+tileHeight;
     const mapW=mapArea.clientWidth, mapH=mapArea.clientHeight;
@@ -110,10 +112,11 @@ window.onload = function() {
     tileMap.forEach(tile=>{
       const hex=document.createElement('div');
       hex.className='hex-tile';
-      if(tile.type==='city')  hex.classList.add('city-tile');
-      else if(tile.type==='slum')  hex.classList.add('slum-tile');
+      if(tile.type==='city') hex.classList.add('city-tile');
+      else if(tile.type==='slum') hex.classList.add('slum-tile');
       else if(tile.type==='river') hex.classList.add('river-tile');
       else hex.classList.add('wasteland-tile');
+
       hex.dataset.tileId=tile.id;
       hex.textContent='?';
 
@@ -122,6 +125,7 @@ window.onload = function() {
       hex.style.left=px+'px';
       hex.style.top=py+'px';
 
+      // 拖曳放置
       hex.ondragover=e=>e.preventDefault();
       hex.ondrop=e=>{
         e.preventDefault();
@@ -135,15 +139,11 @@ window.onload = function() {
   }
   initMapArea();
 
-  // 觀察 tileMap
-  console.log("=== tileMap ===");
-  tileMap.forEach(t=>{
-    console.log(`Tile#${t.id} row=${t.row} col=${t.col} type=${t.type} adjacency=${t.adjacency}`);
-  });
-
-  // UI 更新
+  /********************
+   * UI 更新
+   ********************/
   function updateRoundDisplay(){ roundNumberElem.innerText=currentRound; }
-  function updateResourceDisplay(){
+  function updateResourceDisplay(){ 
     goldAmountElem.innerText=currentGold;
     roundGoldElem.innerText=roundRevenue;
   }
@@ -152,82 +152,62 @@ window.onload = function() {
     refreshBtn.textContent=`刷新卡片(${cost} 金幣)`;
   }
 
-  /*********************************
-   * 建築卡：加入「標籤」與 Tooltip
-   *********************************/
-  // 4 種標籤: 繁華區/貧民窟/河流/荒原
-  const BUILDING_LABELS = [
-    {
-      label: "繁華區",
-      desc: "若此建築物蓋在繁華區地塊，回合結束時產出+4"
-    },
-    {
-      label: "貧民窟",
-      desc: "若此建築物蓋在貧民窟地塊，相鄰每有一座帶「貧民窟」標籤的建築，再+1"
-    },
-    {
-      label: "河流",
-      desc: "若此建築物蓋在河流地塊，回合結束時+3，並隨機使鄰近建築翻倍"
-    },
-    {
-      label: "荒原",
-      desc: "若此建築物蓋在荒原地塊，50% 產出=0，50% 將地塊轉為貧民窟"
-    }
-  ];
-
-  function createBuildingCard(buildingName){
-    // 隨機指定一個標籤 (可依需求自行決定)
-    const randomIndex = Math.floor(Math.random() * BUILDING_LABELS.length);
-    const chosen = BUILDING_LABELS[randomIndex];
-
+  /********************
+   * 建築卡
+   ********************/
+  function createBuildingCard(name){
     const produceAmount=6;
-    const card = document.createElement('div');
+    const card=document.createElement('div');
     card.className='card';
     card.dataset.type='building';
     card.dataset.produce=produceAmount;
     card.dataset.cardId=++cardIdCounter;
-    // 建立 card.dataset.label
-    card.dataset.label=chosen.label; // e.g. "繁華區"
 
-    // 建立卡片內容
     card.innerHTML=`
       <div class="card-gold-output">${produceAmount}</div>
       <div class="card-image-area"></div>
-      <div class="card-name">${buildingName}</div>
+      <div class="card-name">${name}</div>
       <div class="card-rarity">普通</div>
-      <!-- 在稀有度下方加一行標籤文字 -->
-      <div class="card-label">${chosen.label}</div>
-      <!-- tooltip 內容 (hover 出現) -->
-      <div class="tooltip">${chosen.label}：${chosen.desc}</div>
     `;
 
+    // 拖曳: 手排該建築要暫時"消失"
     card.draggable=true;
     card.addEventListener('dragstart', e=>{
       e.dataTransfer.setData('cardId', card.dataset.cardId);
-      e.dataTransfer.setData('text/plain', buildingName);
+      e.dataTransfer.setData('text/plain', name);
+
+      // 讓手排的卡片在拖曳中看起來被拿起 (隱藏)
+      setTimeout(()=>{ 
+        card.style.display='none';
+      },0);
     });
+    // 如果使用者放下或取消，顯示回來
+    card.addEventListener('dragend', e=>{
+      card.style.display='';
+    });
+
     return card;
   }
 
-  function shuffle(array){
-    for(let i=array.length-1;i>0;i--){
+  function shuffle(arr){
+    for(let i=arr.length-1;i>0;i--){
       const j=Math.floor(Math.random()*(i+1));
-      [array[i],array[j]]=[array[j],array[i]];
+      [arr[i],arr[j]]=[arr[j],arr[i]];
     }
-    return array;
+    return arr;
   }
 
   function drawCards(){
     cardPool.innerHTML='';
-    const buildings=["建築A","建築B","建築C","建築D","建築E"];
-    const drawn=shuffle(buildings.slice()).slice(0,5);
-    drawn.forEach(bName=>{
-      const card=createBuildingCard(bName);
+    const pool=["建築A","建築B","建築C","建築D","建築E"];
+    const drawn=shuffle(pool.slice()).slice(0,5);
+    drawn.forEach(name=>{
+      const card=createBuildingCard(name);
       card.onclick=()=>{
         if(selectedCards.includes(card)){
           card.classList.remove('selected');
           selectedCards.splice(selectedCards.indexOf(card),1);
-        }else if(selectedCards.length<2){
+        } else if(selectedCards.length<2){
           card.classList.add('selected');
           selectedCards.push(card);
         }
@@ -249,27 +229,25 @@ window.onload = function() {
     selectedCards.length=0;
     drawCards();
   };
+
   window.skipDraw=function(){
     currentGold+=10;
     updateResourceDisplay();
     drawSection.style.display='none';
   };
+
   window.confirmDraw=function(){
     if(selectedCards.length<2){
-      alert("請至少選 2 張卡牌!");
+      alert("請至少選擇 2 張卡牌！");
       return;
     }
     selectedCards.forEach(c=>{
-      // 複製卡片到手牌
-      const copy=createBuildingCard(c.querySelector('.card-name').innerText);
-      // 保留相同標籤
-      copy.dataset.label=c.dataset.label;
-      copy.querySelector('.card-label').innerText = c.dataset.label;
-      copy.querySelector('.tooltip').innerText = c.querySelector('.tooltip').innerText;
+      const copy = createBuildingCard(c.querySelector('.card-name').innerText);
       hand.appendChild(copy);
     });
     drawSection.style.display='none';
   };
+
   window.startDrawPhase=function(){
     refreshCount=0;
     selectedCards.length=0;
@@ -282,124 +260,95 @@ window.onload = function() {
    * placeBuildingOnTile
    ********************/
   function placeBuildingOnTile(tile, cardElem){
-    console.log(`placeBuildingOnTile => tile#${tile.id}, tile.type=${tile.type}, buildingLabel=${cardElem.dataset.label}`);
-    // 先移除舊產出
+    // 若該地塊已有建築 => 先扣除舊產出
     if(tile.buildingPlaced){
-      roundRevenue-=tile.buildingProduce;
+      roundRevenue -= tile.buildingProduce; 
       tile.buildingProduce=0;
+      tile.slumBonusGranted=false;
     }
-    tile.buildingPlaced=true;
-    tile.label=cardElem.dataset.label; // 把卡片標籤存到 tile (此地塊上的建築)
-    // 基礎產出6
+
+    // 基礎產出=6
     let produceVal=parseInt(cardElem.dataset.produce)||6;
+
+    // city => +2
+    if(tile.type==='city') produceVal+=2;
+    // river => -1
+    if(tile.type==='river') produceVal-=1;
+
     tile.buildingProduce=produceVal;
+    tile.buildingPlaced=true;
 
-    // 更新顯示
-    const tileHex = mapArea.querySelector(`[data-tile-id="${tile.id}"]`);
-    tileHex.textContent = cardElem.querySelector('.card-name').innerText + `(${tile.label})`;
+    // 在地塊上顯示
+    const hex=mapArea.querySelector(`[data-tile-id="${tile.id}"]`);
+    hex.textContent = cardElem.querySelector('.card-name').innerText;
 
-    // 從手牌移除卡
+    // 手排移除該卡
     cardElem.remove();
 
-    // 放置後先重算一次回合收益
-    recalcRevenueFromScratch();
+    // slum => BFS cluster >=3 => +1
+    if(tile.type==='slum'){
+      checkSlumClusterAndAddBonus(tile.id);
+    }
+
+    // 更新回合收益
+    roundRevenue += tile.buildingProduce;
+    updateResourceDisplay();
   }
 
-  // 回合結束時 => 套用標籤加成 => 再重算 roundRevenue
-  function applyBuildingLabelSynergy(){
-    // 先重置 buildingProduce 到基礎
-    tileMap.forEach(tile=>{
-      if(tile.buildingPlaced){
-        // 基礎=6
-        let base=6;
-        if(tile.type==='city')  base+=0; // city不在這裡加, 之後"繁華區"標籤才判斷
-        if(tile.type==='river') base+=0; // 之後河流標籤再加
-        // (注意: 先不管 tile.type=slum/wasteland, 之後標籤再算效果)
-        tile.buildingProduce=base;
-      }
-    });
+  // BFS：若 cluster>=3 => 連通 slum +1
+  function checkSlumClusterAndAddBonus(startId){
+    const visited=new Set();
+    const queue=[startId];
+    const cluster=[];
+    while(queue.length>0){
+      const currId=queue.shift();
+      if(visited.has(currId)) continue;
+      visited.add(currId);
 
-    // 逐一檢查 tile.label & tile.type
-    tileMap.forEach(tile=>{
-      if(!tile.buildingPlaced) return; 
-      const label = tile.label; 
-      // 1) 繁華區標籤 vs city地塊 => +4
-      if(label==='繁華區' && tile.type==='city'){
-        tile.buildingProduce +=4;
-      }
-      // 2) 貧民窟標籤 vs slum地塊 => adjacency 中帶"貧民窟"標籤的建築數 => +1 * 數量
-      if(label==='貧民窟' && tile.type==='slum'){
-        // 數 adjacency
-        let count=0;
-        tile.adjacency.forEach(nbId=>{
-          const nbTile = tileMap.find(x=>x.id===nbId);
-          if(nbTile && nbTile.buildingPlaced && nbTile.label==='貧民窟'){
-            count++;
+      const t=tileMap.find(x=>x.id===currId);
+      if(t.type==='slum' && t.buildingPlaced){
+        cluster.push(currId);
+        // 搜尋相鄰
+        t.adjacency.forEach(nbId=>{
+          const nb=tileMap.find(xx=>xx.id===nbId);
+          if(!visited.has(nbId) && nb.type==='slum' && nb.buildingPlaced){
+            queue.push(nbId);
           }
         });
-        tile.buildingProduce += count; // each adjacency with "貧民窟" => +1
       }
-      // 3) 河流標籤 vs river地塊 => +3, 並隨機讓鄰近建築翻倍
-      if(label==='河流' && tile.type==='river'){
-        tile.buildingProduce +=3;
-        // 若有鄰近建築 => pick random => *2
-        let nbBuildings = tile.adjacency
-          .map(id=> tileMap.find(x=>x.id===id))
-          .filter(tt=>tt.buildingPlaced);
-        if(nbBuildings.length>0){
-          const randIndex=Math.floor(Math.random()*nbBuildings.length);
-          const chosen = nbBuildings[randIndex];
-          chosen.buildingProduce *=2; 
-          console.log(`河流標籤翻倍 => tile#${chosen.id}`);
+    }
+    // 若 cluster>=3 => each +1
+    if(cluster.length>=3){
+      cluster.forEach(cid=>{
+        const slumTile = tileMap.find(xx=>xx.id===cid);
+        if(!slumTile.slumBonusGranted){
+          roundRevenue -= slumTile.buildingProduce;
+          slumTile.buildingProduce +=1;
+          slumTile.slumBonusGranted=true;
+          roundRevenue += slumTile.buildingProduce;
         }
-      }
-      // 4) 荒原標籤 vs wasteland地塊 => 50%產出=0, 50%地塊轉"slum"
-      if(label==='荒原' && tile.type==='wasteland'){
-        let r=Math.random();
-        if(r<0.5){
-          // 50% => produce=0
-          tile.buildingProduce=0;
-        } else {
-          // 另外 50% => tile.type='slum'
-          tile.type='slum';
-          console.log(`荒原標籤 => tile#${tile.id} 變成 slum`);
-        }
-      }
-    });
-    // 最後重新累計 roundRevenue
-    recalcRevenueFromScratch();
-  }
-
-  // 重新計算 roundRevenue
-  function recalcRevenueFromScratch(){
-    let sum=0;
-    tileMap.forEach(tile=>{
-      if(tile.buildingPlaced){
-        sum+=tile.buildingProduce;
-      }
-    });
-    roundRevenue=sum;
-    updateResourceDisplay();
+      });
+      updateResourceDisplay();
+    }
   }
 
   // 回合結束
-  function endTurn(){
-    // 先應用 "標籤" 加成 (繁華區/貧民窟/河流/荒原)
-    applyBuildingLabelSynergy();
-
-    // 再把回合收益加到 currentGold
-    currentGold += roundRevenue;
+  endTurnBtn.addEventListener('click', ()=>{
+    // 結束回合 => 把 roundRevenue 加到 currentGold
+    currentGold+=roundRevenue;
     currentRound++;
     updateRoundDisplay();
     updateResourceDisplay();
-
     // 進入下一回合抽卡
     window.startDrawPhase();
-  }
+  });
 
-  // 監聽
-  endTurnBtn.addEventListener('click', endTurn);
-
+  // 監聽鍵盤(Enter)開始
+  document.addEventListener('keydown', e=>{
+    if(startScreen.style.display!=='none' && (e.key==='Enter' || e.key==='NumpadEnter')){
+      startGame();
+    }
+  });
   function startGame(){
     startScreen.style.display='none';
     currentRound=1;
@@ -409,11 +358,12 @@ window.onload = function() {
     updateResourceDisplay();
     window.startDrawPhase();
   }
-  document.addEventListener('keydown', e=>{
-    if(startScreen.style.display!=='none' && (e.key==='Enter' || e.key==='NumpadEnter')){
-      startGame();
-    }
+
+  // info
+  infoBtn.addEventListener('click', ()=>{
+    infoModal.style.display='flex';
   });
-  infoBtn.addEventListener('click', ()=>{ infoModal.style.display='flex'; });
-  closeInfoBtn.addEventListener('click', ()=>{ infoModal.style.display='none'; });
+  closeInfoBtn.addEventListener('click',()=>{
+    infoModal.style.display='none';
+  });
 };
