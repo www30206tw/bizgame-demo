@@ -12,7 +12,6 @@ body {
   justify-content: space-between;
 }
 
-/* 中間區域 */
 .middle-section {
   display: flex;
   background: #74b9ff;
@@ -50,10 +49,8 @@ body {
 }
 #draw-section {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
   background: rgba(10,10,10,0.5);
   display: none;
   justify-content: center;
@@ -73,7 +70,7 @@ body {
   background: #eee;
   cursor: pointer;
   width: 120px;
-  height: 220px; /* 增高以容納標籤及 tooltip */
+  height: 220px; 
   position: relative;
 }
 .card.selected {
@@ -81,10 +78,8 @@ body {
 }
 .card-gold-output {
   position: absolute;
-  top: 5px;
-  left: 5px;
-  width: 24px;
-  height: 24px;
+  top: 5px; left: 5px;
+  width: 24px; height: 24px;
   border-radius: 50%;
   background-color: gold;
   text-align: center;
@@ -94,9 +89,9 @@ body {
 }
 .card-image-area {
   position: absolute;
-  top: 30px;
+  top: 30px; 
   left: 10px;
-  width: 100px;
+  width: 100px; 
   height: 60px;
   background-color: #ccc;
 }
@@ -115,36 +110,35 @@ body {
   font-size: 14px;
   color: #444;
 }
-/* 標籤顯示 */
 .card-label {
   position: absolute;
   top: 145px;
   width: 100%;
   text-align: center;
-  font-weight: bold;
   font-size: 14px;
-  color: #222;
+  font-weight: bold;
+  color: #111;
 }
-/* tooltip (hover 顯示) */
+/* tooltip: hover 顯示 */
 .tooltip {
   position: absolute;
   top: 10px;
-  left: 130px;
+  left: 130px; 
   width: 180px;
   background: #fff;
   color: #333;
   border: 1px solid #aaa;
   padding: 5px;
-  display: none;
+  display: none; 
   z-index: 99;
 }
 .card:hover .tooltip {
   display: block;
 }
 
-/* 六邊形地塊 */
+/* 地塊 (hex tile) */
 .hex-tile {
-  width: 80px;
+  width: 80px; 
   height: 80px;
   clip-path: polygon(
     50% 0%,
@@ -154,8 +148,8 @@ body {
     7% 75%,
     7% 25%
   );
-  display: flex;
-  justify-content: center;
+  display: flex; 
+  justify-content: center; 
   align-items: center;
   font-size: 14px;
   color: #fff;
@@ -174,18 +168,16 @@ body {
   background-color: #d4ac0d;
 }
 
-/* 遊戲開始畫面 */
+/* 開始畫面 */
 .start-screen {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
   background: rgba(0,0,0,0.8);
   color: #fff;
-  display: flex;
+  display: flex; 
   flex-direction: column;
-  justify-content: center;
+  justify-content: center; 
   align-items: center;
   z-index: 1000;
 }
@@ -205,13 +197,11 @@ body {
 /* 說明彈窗 */
 .info-modal {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
   background: rgba(10,10,10,0.6);
-  display: none;
-  justify-content: center;
+  display: none; 
+  justify-content: center; 
   align-items: center;
   z-index: 1001;
 }
