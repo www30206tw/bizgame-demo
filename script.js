@@ -1,30 +1,32 @@
-let cardIdCounter=0;
-window.onload=function(){
-  let currentRound=1;
-  let currentGold=0;
-  let roundRevenue=0;
-  let refreshCount=0;
+let cardIdCounter = 0;
 
-  const startScreen=document.getElementById('start-screen');
-  const startBtn=document.getElementById('startBtn');
-  const drawSection=document.getElementById('draw-section');
-  const cardPool=document.getElementById('card-pool');
-  const hand=document.getElementById('hand');
-  const mapArea=document.getElementById('map-area');
-  const roundNumberElem=document.getElementById('round-number');
-  const endTurnBtn=document.getElementById('end-turn-btn');
-  const goldAmountElem=document.getElementById('gold-amount');
-  const roundGoldElem=document.getElementById('round-gold');
-  const refreshBtn=document.getElementById('refresh-btn');
-  const infoBtn=document.getElementById('info-btn');
-  const infoModal=document.getElementById('info-modal');
-  const closeInfoBtn=document.getElementById('close-info-btn');
+window.onload = function() {
+  let currentRound = 1;
+  let currentGold = 0;
+  let roundRevenue = 0;
+  let refreshCount = 0;
 
-  const selectedCards=[];
+  console.log("Script Loaded: in onload.");
 
-  /*******************************
-   * 8張卡池 (名稱/稀有度/標籤/基礎=6)
-   *******************************/
+  // DOM
+  const startScreen = document.getElementById('start-screen');
+  const startBtn = document.getElementById('startBtn');
+  const drawSection = document.getElementById('draw-section');
+  const cardPool = document.getElementById('card-pool');
+  const hand = document.getElementById('hand');
+  const mapArea = document.getElementById('map-area');
+  const roundNumberElem = document.getElementById('round-number');
+  const endTurnBtn = document.getElementById('end-turn-btn');
+  const goldAmountElem = document.getElementById('gold-amount');
+  const roundGoldElem = document.getElementById('round-gold');
+  const refreshBtn = document.getElementById('refresh-btn');
+  const infoBtn = document.getElementById('info-btn');
+  const infoModal = document.getElementById('info-modal');
+  const closeInfoBtn = document.getElementById('close-info-btn');
+
+  const selectedCards = [];
+
+  // 8張卡池
   const cardPoolData = [
     { name:'建築A', rarity:'普通',  label:'荒原',   baseProduce:6 },
     { name:'建築B', rarity:'普通',  label:'貧民窟', baseProduce:6 },
@@ -35,18 +37,14 @@ window.onload=function(){
     { name:'建築G', rarity:'傳說',  label:'繁華區', baseProduce:6 },
     { name:'建築H', rarity:'傳說',  label:'河流',   baseProduce:6 },
   ];
-
-  // 標籤效果描述 (暫時只用來顯示 tooltip)
-  const labelEffectDesc={
-    "繁華區":"若此建築蓋在city地塊，回合結束+4",
-    "貧民窟":"若蓋在slum地塊，相鄰有貧民窟建築 => each+1",
-    "河流":"若蓋在river地塊，回合結束+3 & 周圍翻倍 (暫不實作)",
-    "荒原":"若蓋在wasteland地塊，50%不產出 & 50%轉成貧民窟 (暫不實作)"
+  const labelEffectDesc = {
+    "繁華區":"若此建築蓋在city地塊,回合結束+4",
+    "貧民窟":"若在slum地塊,相鄰帶貧民窟=>+1",
+    "河流":"若在river地塊,回合結束+3&翻倍(暫不)",
+    "荒原":"50%不產出,50%轉slum(暫不)"
   };
 
-  /*********************
-   * 建立地塊(31塊)
-   *********************/
+  // 建立地塊
   function createTileMap31(){
     const rows=[4,5,4,5,4,5,4];
     const typeMapping={
@@ -71,7 +69,7 @@ window.onload=function(){
           buildingPlaced:false,
           slumBonusGranted:false,
           adjacency:[],
-          label:"" // 用於紀錄該建築的標籤
+          label:""
         });
         idCounter++;
       }
@@ -80,7 +78,7 @@ window.onload=function(){
   }
   let tileMap=createTileMap31();
 
-  // adjacency(odd-r)
+  // adjacency
   const directionsEven=[
     {dr:-1,dc:0},{dr:-1,dc:1},{dr:0,dc:-1},{dr:0,dc:1},{dr:1,dc:0},{dr:1,dc:1}
   ];
@@ -102,6 +100,7 @@ window.onload=function(){
 
   // 絕對定位
   function initMapArea(){
+    console.log("initMapArea() called");
     mapArea.innerHTML='';
     const tileW=80, tileH=80;
     const verticalSpacing=tileH*0.75;
@@ -126,9 +125,9 @@ window.onload=function(){
     tileMap.forEach(tile=>{
       const hex=document.createElement('div');
       hex.className='hex-tile';
-      if(tile.type==='city') hex.classList.add('city-tile');
-      else if(tile.type==='slum') hex.classList.add('slum-tile');
-      else if(tile.type==='river') hex.classList.add('river-tile');
+      if(tile.type==='city') hex.classList.add('city-tile'); 
+      else if(tile.type==='slum') hex.classList.add('slum-tile'); 
+      else if(tile.type==='river') hex.classList.add('river-tile'); 
       else hex.classList.add('wasteland-tile');
 
       hex.dataset.tileId=tile.id;
@@ -155,7 +154,7 @@ window.onload=function(){
 
   // UI
   function updateRoundDisplay(){ roundNumberElem.innerText=currentRound; }
-  function updateResourceDisplay(){ 
+  function updateResourceDisplay(){
     goldAmountElem.innerText=currentGold;
     roundGoldElem.innerText=roundRevenue;
   }
@@ -164,19 +163,21 @@ window.onload=function(){
     refreshBtn.textContent=`刷新卡片(${cost} 金幣)`;
   }
 
-  // 建築卡 8 張
+  // 洗牌
   function shuffle(arr){
-    for(let i=arr.length-1; i>0; i--){
+    for(let i=arr.length-1;i>0;i--){
       const j=Math.floor(Math.random()*(i+1));
       [arr[i],arr[j]]=[arr[j],arr[i]];
     }
     return arr;
   }
+
+  // 生成卡牌 DOM
   function createBuildingCard(info){
     const card=document.createElement('div');
     card.className='card';
     card.dataset.type='building';
-    card.dataset.produce=info.baseProduce; // 6
+    card.dataset.produce=info.baseProduce; 
     card.dataset.cardId=++cardIdCounter;
     card.dataset.label=info.label;
 
@@ -188,7 +189,6 @@ window.onload=function(){
       <div class="card-label">${info.label}</div>
       <div class="tooltip">${info.label}：${labelEffectDesc[info.label]||""}</div>
     `;
-    // 拖曳 => 消失
     card.draggable=true;
     card.addEventListener('dragstart', e=>{
       e.dataTransfer.setData('cardId', card.dataset.cardId);
@@ -202,6 +202,7 @@ window.onload=function(){
   }
 
   function drawCards(){
+    console.log("drawCards() called.");
     cardPool.innerHTML='';
     const arr=shuffle(cardPoolData.slice());
     const five=arr.slice(0,5);
@@ -221,6 +222,7 @@ window.onload=function(){
   }
 
   window.refreshCards=function(){
+    console.log("refreshCards() called");
     const cost=2*(refreshCount+1);
     if(currentGold<cost){
       alert("金幣不足，無法刷新!");
@@ -235,14 +237,16 @@ window.onload=function(){
   };
 
   window.skipDraw=function(){
+    console.log("skipDraw() called");
     currentGold+=10;
     updateResourceDisplay();
     drawSection.style.display='none';
   };
 
   window.confirmDraw=function(){
+    console.log("confirmDraw() called, selectedCards=", selectedCards.length);
     if(selectedCards.length<2){
-      alert("請至少選擇 2 張卡牌!");
+      alert("請至少選 2 張卡牌!");
       return;
     }
     selectedCards.forEach(c=>{
@@ -281,6 +285,7 @@ window.onload=function(){
   };
 
   window.startDrawPhase=function(){
+    console.log("startDrawPhase()");
     refreshCount=0;
     selectedCards.length=0;
     updateRefreshButton();
@@ -292,36 +297,27 @@ window.onload=function(){
    * placeBuildingOnTile
    *********************/
   function placeBuildingOnTile(tile, cardElem){
-    // 若該地塊已有建築 => 先扣除
+    console.log("placeBuildingOnTile => tile#"+tile.id,"type=",tile.type);
     if(tile.buildingPlaced){
       roundRevenue-=tile.buildingProduce;
       tile.buildingProduce=0;
       tile.slumBonusGranted=false;
     }
-
-    // 基礎 produce
     let produceVal=parseInt(cardElem.dataset.produce)||6;
-
-    // city => +1 (依需求, 從原本+2改為+1)
+    // city => +1
     if(tile.type==='city') produceVal+=1;
     // river => -1
     if(tile.type==='river') produceVal-=1;
 
     tile.buildingProduce=produceVal;
     tile.buildingPlaced=true;
+    tile.label=cardElem.dataset.label;
 
-    // 儲存此建築的標籤
-    tile.label=cardElem.dataset.label; // e.g. "繁華區","貧民窟","河流","荒原"
-
-    // 更新地塊顯示
     const hex=mapArea.querySelector(`[data-tile-id="${tile.id}"]`);
     const bName=cardElem.querySelector('.card-name').innerText;
     hex.textContent=bName;
-
-    // 手排移除
     cardElem.remove();
 
-    // 若是slum => BFS
     if(tile.type==='slum'){
       checkSlumClusterAndAddBonus(tile.id);
     } else {
@@ -332,6 +328,7 @@ window.onload=function(){
 
   // BFS => slum cluster >=3 => +1
   function checkSlumClusterAndAddBonus(startId){
+    console.log("checkSlumCluster start from tile#"+startId);
     const visited=new Set();
     const queue=[startId];
     const cluster=[];
@@ -344,12 +341,13 @@ window.onload=function(){
         cluster.push(t);
         t.adjacency.forEach(nbId=>{
           const nb=tileMap.find(xx=>xx.id===nbId);
-          if(!visited.has(nbId) && nb && nb.type==='slum' && nb.buildingPlaced){
+          if(nb && nb.type==='slum' && nb.buildingPlaced && !visited.has(nbId)){
             queue.push(nbId);
           }
         });
       }
     }
+    console.log("cluster =>", cluster.map(x=>x.id));
     if(cluster.length>=3){
       cluster.forEach(ct=>{
         if(!ct.slumBonusGranted){
@@ -363,34 +361,29 @@ window.onload=function(){
     }
   }
 
-  // 回合結束 => 先對標籤執行效果 => 再 recalc => 加到 currentGold
-  endTurnBtn.addEventListener('click',()=>{
-    applyLabelEffects();         // 先執行標籤
-    recalcRevenueFromScratch();  // 再一次計算最終 roundRevenue
-    currentGold += roundRevenue; // 把本回合收益加進金幣
+  // 回合結束 => label effect => recalc => gold += roundRevenue
+  endTurnBtn.addEventListener('click', ()=>{
+    console.log("endTurn => apply label effect => recalc => add gold");
+    applyLabelEffects();
+    recalcRevenueFromScratch();
+    currentGold+=roundRevenue;
     currentRound++;
     updateRoundDisplay();
     updateResourceDisplay();
     window.startDrawPhase();
   });
 
-  /*********************
-   * applyLabelEffects
-   * 這裡示範只實作 "繁華區" => +4
-   * (其餘標籤暫時不做)
-   *********************/
   function applyLabelEffects(){
     tileMap.forEach(tile=>{
       if(tile.buildingPlaced){
         // "繁華區"標籤 + city地塊 => +4
         if(tile.label==='繁華區' && tile.type==='city'){
-          tile.buildingProduce += 4; 
+          tile.buildingProduce+=4;
         }
       }
     });
   }
 
-  // 重新計算回合收益
   function recalcRevenueFromScratch(){
     let sum=0;
     tileMap.forEach(t=>{
@@ -402,16 +395,20 @@ window.onload=function(){
     updateResourceDisplay();
   }
 
-  // Start Game => Enter 或 按鈕
+  // 監聽鍵盤 => 進入遊戲
   document.addEventListener('keydown', e=>{
-    if(startScreen.style.display!=='none' && (e.key==='Enter'|| e.key==='NumpadEnter')){
+    console.log("keydown =>", e.key,"startScreen?", startScreen.style.display);
+    if(startScreen.style.display!=='none' && (e.key==='Enter' || e.key==='NumpadEnter')){
       startGame();
     }
   });
-  startBtn.addEventListener('click', ()=>{
+  startBtn.addEventListener('click', e=>{
+    console.log("startBtn clicked");
     startGame();
   });
+
   function startGame(){
+    console.log("startGame() called");
     startScreen.style.display='none';
     currentRound=1;
     currentGold=0;
@@ -422,10 +419,12 @@ window.onload=function(){
   }
 
   // info
-  infoBtn.addEventListener('click',()=>{
+  infoBtn.addEventListener('click', ()=>{
     infoModal.style.display='flex';
   });
-  closeInfoBtn.addEventListener('click',()=>{
+  closeInfoBtn.addEventListener('click', ()=>{
     infoModal.style.display='none';
   });
+
+  console.log("Script loaded: end of onload.");
 };
