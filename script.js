@@ -285,14 +285,26 @@ card.addEventListener('dragend', e => {
         <div class="tooltip">${cLabel}：${labelEffectDesc[cLabel] || ""}</div>
       `;
       newCard.draggable = true;
-      newCard.addEventListener('dragstart', e => {
-        e.dataTransfer.setData('cardId', newCard.dataset.cardId);
-        e.dataTransfer.setData('text/plain', cName);
-        setTimeout(() => { newCard.style.display = 'none'; }, 0);
-      });
-      newCard.addEventListener('dragend', e => {
-        newCard.style.display = '';
-      });
+      let dragClone = null;
+newCard.addEventListener('dragstart', e => {
+  e.dataTransfer.setData('cardId', newCard.dataset.cardId);
+  e.dataTransfer.setData('text/plain', cName);
+  dragClone = newCard.cloneNode(true);
+  dragClone.style.position = 'absolute';
+  dragClone.style.left = '-9999px';
+  dragClone.style.top = '-9999px';
+  document.body.appendChild(dragClone);
+  e.dataTransfer.setDragImage(dragClone, 0, 0);
+  setTimeout(() => { newCard.style.display = 'none'; }, 0);
+});
+newCard.addEventListener('dragend', e => {
+  newCard.style.display = '';
+  if (dragClone) {
+    document.body.removeChild(dragClone);
+    dragClone = null;
+  }
+});
+
       hand.appendChild(newCard);
     });
     drawSection.style.display = 'none';
