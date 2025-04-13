@@ -4,7 +4,7 @@ body {
   font-family: sans-serif;
 }
 
-/* 頂部、底部 */
+/* 頂部與底部 */
 .top-bar, .bottom-bar {
   background: pink;
   padding: 10px;
@@ -18,12 +18,14 @@ body {
   background: #74b9ff;
   height: 480px;
 }
+
 .map-area {
   flex: 1;
   position: relative;
   margin: 20px;
   border: 1px solid #aaa;
 }
+
 .sidebar {
   width: 60px;
   background: #ddd;
@@ -32,7 +34,6 @@ body {
   align-items: center;
 }
 
-/* 手排 */
 .hand-cards {
   display: flex;
   gap: 10px;
@@ -49,8 +50,10 @@ body {
 }
 #draw-section {
   position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   background: rgba(10,10,10,0.5);
   display: none;
   justify-content: center;
@@ -64,13 +67,13 @@ body {
   margin-bottom: 10px;
 }
 
-/* 卡片 */
+/* 卡片樣式 */
 .card {
   border: 1px solid #333;
   background: #eee;
   cursor: pointer;
   width: 120px;
-  height: 220px;
+  height: 220px; /* 增高以容納標籤及 tooltip */
   position: relative;
 }
 .card.selected {
@@ -78,8 +81,10 @@ body {
 }
 .card-gold-output {
   position: absolute;
-  top: 5px; left: 5px;
-  width: 24px; height: 24px;
+  top: 5px;
+  left: 5px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background-color: gold;
   text-align: center;
@@ -89,8 +94,10 @@ body {
 }
 .card-image-area {
   position: absolute;
-  top: 30px; left: 10px;
-  width: 100px; height: 60px;
+  top: 30px;
+  left: 10px;
+  width: 100px;
+  height: 60px;
   background-color: #ccc;
 }
 .card-name {
@@ -108,21 +115,21 @@ body {
   font-size: 14px;
   color: #444;
 }
+/* 標籤顯示 */
 .card-label {
   position: absolute;
   top: 145px;
   width: 100%;
   text-align: center;
-  font-size: 14px;
   font-weight: bold;
-  color: #111;
+  font-size: 14px;
+  color: #222;
 }
-
-/* tooltip: hover顯示 */
+/* tooltip (hover 顯示) */
 .tooltip {
   position: absolute;
   top: 10px;
-  left: 130px; 
+  left: 130px;
   width: 180px;
   background: #fff;
   color: #333;
@@ -137,7 +144,8 @@ body {
 
 /* 六邊形地塊 */
 .hex-tile {
-  width: 80px; height: 80px;
+  width: 80px;
+  height: 80px;
   clip-path: polygon(
     50% 0%,
     93% 25%,
@@ -146,8 +154,11 @@ body {
     7% 75%,
     7% 25%
   );
-  display: flex; justify-content: center; align-items: center;
-  font-size: 14px; color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 14px;
+  color: #fff;
   position: absolute;
 }
 .city-tile {
@@ -163,15 +174,19 @@ body {
   background-color: #d4ac0d;
 }
 
-/* 開始畫面 */
+/* 遊戲開始畫面 */
 .start-screen {
   position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   background: rgba(0,0,0,0.8);
   color: #fff;
-  display: flex; flex-direction: column;
-  justify-content: center; align-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   z-index: 1000;
 }
 .start-screen h1 {
@@ -190,11 +205,14 @@ body {
 /* 說明彈窗 */
 .info-modal {
   position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   background: rgba(10,10,10,0.6);
   display: none;
-  justify-content: center; align-items: center;
+  justify-content: center;
+  align-items: center;
   z-index: 1001;
 }
 .info-content {
@@ -202,7 +220,8 @@ body {
   padding: 20px;
   border-radius: 8px;
   color: #333;
-  max-width: 300px; width: 80%;
+  max-width: 300px;
+  width: 80%;
   text-align: left;
   position: relative;
 }
