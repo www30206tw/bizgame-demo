@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Game Demo - Slum BFS Fix</title>
+    <title>Game Demo - Card Pool with Labels</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
@@ -38,7 +38,7 @@
       </div>
     </div>
 
-    <!-- 中間區域 (地塊 + 側邊欄) -->
+    <!-- 中間地塊與側邊欄區域 -->
     <div class="middle-section">
       <div class="sidebar">
         <button disabled>科技樹</button>
@@ -60,10 +60,10 @@
       <div class="info-content">
         <h2>地塊效果</h2>
         <ul>
-          <li><b>City</b>：建築 +2</li>
-          <li><b>Slum</b>：若 >=3 相連且都有建築 → 各 +1</li>
-          <li><b>River</b>：建築 -1</li>
-          <li><b>Wasteland</b>：無效果</li>
+          <li>City（繁華區）：建築 +2</li>
+          <li>Slum（貧民窟）：若3塊（含）以上相連且都有建築 => 各 +1</li>
+          <li>River（河流）：建築 -1</li>
+          <li>Wasteland（荒原）：無效果</li>
         </ul>
         <button id="close-info-btn">關閉</button>
       </div>
