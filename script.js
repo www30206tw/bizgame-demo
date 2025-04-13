@@ -1,4 +1,4 @@
-// 確保只引用此一份 script.js
+// 確保只引用此一份 script.js，不重複宣告
 let cardIdCounter = 0;
 window.onload = function() {
   /*******************
@@ -29,11 +29,17 @@ window.onload = function() {
   const selectedCards = [];
 
   /*******************
-   * 3. 建立 31 塊地塊 (7行: 4,5,4,5,4,5,4)
-   * 編號依行從左至右遞增
+   * 3. 建立 31 塊地塊 (7 行：分別 4,5,4,5,4,5,4)
+   * 編號依行從左至右遞增。型態依照下表：
+   * 1:荒原, 2:荒原, 3:荒原, 4:荒原,
+   * 5:荒原, 6:貧民窟, 7:貧民窟, 8:荒原, 9:河流, 10:貧民窟,
+   * 11:繁華區, 12:貧民窟, 13:河流, 14:貧民窟, 15:繁華區, 16:繁華區,
+   * 17:河流, 18:荒原, 19:貧民窟, 20:貧民窟, 21:河流, 22:荒原,
+   * 23:荒原, 24:貧民窟, 25:河流, 26:荒原, 27:荒原, 28:荒原, 29:河流,
+   * 30:荒原, 31:荒原
    *******************/
   function createTileMap31() {
-    const rows = [4,5,4,5,4,5,4];
+    const rows = [4, 5, 4, 5, 4, 5, 4];
     const typeMapping = {
       1:'wasteland', 2:'wasteland', 3:'wasteland', 4:'wasteland',
       5:'wasteland', 6:'slum', 7:'slum', 8:'wasteland', 9:'river', 10:'slum',
@@ -65,8 +71,10 @@ window.onload = function() {
   let tileMap = createTileMap31();
 
   /*******************
-   * 4. 計算鄰接 (使用 odd‑r offset)
-   * 本版本規則：若行為偶數 (row 0,2,4,6)：不偏移；若行為奇數 (row1,3,5)：向左移 (使用 directionsOdd)
+   * 4. 計算鄰接 (odd‑r offset)
+   * 規則：
+   * - 偶數行 (row 0,2,4,6)：使用 directionsEven (無水平偏移)
+   * - 奇數行 (row 1,3,5)：使用 directionsOdd (向左偏移)
    *******************/
   const directionsEven = [
     { dr: -1, dc: 0 },
@@ -100,7 +108,8 @@ window.onload = function() {
   computeAdjacency();
 
   /*******************
-   * 5. 絕對定位地塊置中 (並將奇數行向左移一格)
+   * 5. 絕對定位地塊置中
+   *   計算時若 row 為奇數，向左移 offsetX (即 -tileWidth/2)
    *******************/
   function initMapArea() {
     mapArea.innerHTML = '';
@@ -109,7 +118,7 @@ window.onload = function() {
     const offsetX = tileWidth / 2;
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     const coords = tileMap.map(tile => {
-      const shiftLeft = (tile.row % 2 === 1); // 奇數行向左移
+      const shiftLeft = (tile.row % 2 === 1);
       const x = tile.col * tileWidth + (shiftLeft ? -offsetX : 0);
       const y = tile.row * verticalSpacing;
       minX = Math.min(minX, x);
@@ -135,7 +144,7 @@ window.onload = function() {
       const px = c.x - minX + centerX;
       const py = c.y - minY + centerY;
       hex.style.left = px + 'px';
-      hex.style.top  = py + 'px';
+      hex.style.top = py + 'px';
       hex.ondragover = e => e.preventDefault();
       hex.ondrop = e => {
         e.preventDefault();
@@ -189,7 +198,7 @@ window.onload = function() {
     return card;
   }
   function shuffle(array) {
-    for (let i = array.length - 1; i > 0; i--) {
+    for (let i = array.length-1; i>0; i--) {
       const j = Math.floor(Math.random()*(i+1));
       [array[i], array[j]] = [array[j], array[i]];
     }
@@ -232,7 +241,7 @@ window.onload = function() {
     drawSection.style.display = 'none';
   };
   window.confirmDraw = function() {
-    if(selectedCards.length < 2) {
+    if (selectedCards.length < 2) {
       alert("請至少選擇 2 張卡牌！");
       return;
     }
@@ -251,65 +260,64 @@ window.onload = function() {
   };
 
   /*******************
-   * 8. 放置建築及計算產出
+   * 8. 放置建築並計算產出
    *******************/
   function placeBuildingOnTile(tile, cardElem) {
-    if(tile.buildingPlaced) {
+    if (tile.buildingPlaced) {
       roundRevenue -= tile.buildingProduce;
       tile.buildingProduce = 0;
       tile.slumBonusGranted = false;
     }
     let produceVal = parseInt(cardElem.dataset.produce) || 6;
-    if(tile.type === 'city') produceVal += 2;
-    if(tile.type === 'river') produceVal -= 1;
+    if (tile.type === 'city') produceVal += 2;
+    if (tile.type === 'river') produceVal -= 1;
     tile.buildingProduce = produceVal;
     tile.buildingPlaced = true;
     const hexEl = mapArea.querySelector(`[data-tile-id="${tile.id}"]`);
     hexEl.textContent = cardElem.querySelector('.card-name').innerText;
     cardElem.remove();
-    if(tile.type === 'slum') {
+    if (tile.type === 'slum') {
       recalcSlumBonus();
     }
     roundRevenue += tile.buildingProduce;
     updateResourceDisplay();
   }
 
-  // 更新：在 recalcSlumBonus() 中加入除錯輸出
+  // recalcSlumBonus：使用 BFS 找出每個連通的 slum 集群，若成員數 ≥ 3，則整個集群各 +1
   function recalcSlumBonus() {
-    // 先重設所有 slum tile 的 bonus（如果之前已加）
+    console.log("recalcSlumBonus() 被呼叫");
+    // 先重置所有已加成的 slum (若已加成則移除)
     tileMap.forEach(t => {
-      if(t.type === 'slum' && t.buildingPlaced && t.slumBonusGranted) {
+      if (t.type === 'slum' && t.buildingPlaced && t.slumBonusGranted) {
         roundRevenue -= t.buildingProduce;
         t.buildingProduce -= 1;
         t.slumBonusGranted = false;
         roundRevenue += t.buildingProduce;
       }
     });
-    // 搜尋所有連通 slum 集群
     let visited = new Set();
     tileMap.forEach(tile => {
-      if(tile.type === 'slum' && tile.buildingPlaced && !visited.has(tile.id)) {
+      if (tile.type === 'slum' && tile.buildingPlaced && !visited.has(tile.id)) {
         let cluster = [];
         let queue = [tile.id];
-        while(queue.length > 0) {
+        while (queue.length > 0) {
           let currId = queue.shift();
-          if(visited.has(currId)) continue;
+          if (visited.has(currId)) continue;
           visited.add(currId);
           let currTile = tileMap.find(x => x.id === currId);
-          if(currTile && currTile.type === 'slum' && currTile.buildingPlaced) {
+          if (currTile && currTile.type === 'slum' && currTile.buildingPlaced) {
             cluster.push(currTile);
             currTile.adjacency.forEach(nbId => {
-              if(!visited.has(nbId)) {
+              if (!visited.has(nbId)) {
                 queue.push(nbId);
               }
             });
           }
         }
-        // Debug：輸出當前連通集成員
         console.log("cluster found", cluster.map(x => x.id));
-        if(cluster.length >= 3) {
+        if (cluster.length >= 3) {
           cluster.forEach(ct => {
-            if(!ct.slumBonusGranted) {
+            if (!ct.slumBonusGranted) {
               roundRevenue -= ct.buildingProduce;
               ct.buildingProduce += 1;
               ct.slumBonusGranted = true;
@@ -323,7 +331,7 @@ window.onload = function() {
   }
 
   /*******************
-   * 9. 回合流程與 UI 更新
+   * 9. 回合流程 & UI 更新
    *******************/
   function updateRoundDisplay() {
     roundNumberElem.innerText = currentRound;
@@ -336,7 +344,6 @@ window.onload = function() {
     const cost = 2 * (refreshCount + 1);
     refreshBtn.textContent = `刷新卡片(${cost} 金幣)`;
   }
-
   function startGame() {
     startScreen.style.display = 'none';
     currentRound = 1;
@@ -347,7 +354,7 @@ window.onload = function() {
     window.startDrawPhase();
   }
   document.addEventListener('keydown', e => {
-    if(startScreen.style.display !== 'none' && (e.key === 'Enter' || e.key === 'NumpadEnter')) {
+    if (startScreen.style.display !== 'none' && (e.key === 'Enter' || e.key === 'NumpadEnter')) {
       startGame();
     }
   });
@@ -365,4 +372,3 @@ window.onload = function() {
     infoModal.style.display = 'none';
   });
 };
-
