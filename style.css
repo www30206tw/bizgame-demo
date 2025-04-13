@@ -4,7 +4,7 @@ body {
   font-family: sans-serif;
 }
 
-/* 頂部與底部 */
+/* 頂部、底部 */
 .top-bar, .bottom-bar {
   background: pink;
   padding: 10px;
@@ -12,19 +12,18 @@ body {
   justify-content: space-between;
 }
 
+/* 中間區域 */
 .middle-section {
   display: flex;
   background: #74b9ff;
   height: 480px;
 }
-
 .map-area {
   flex: 1;
   position: relative;
   margin: 20px;
   border: 1px solid #aaa;
 }
-
 .sidebar {
   width: 60px;
   background: #ddd;
@@ -33,6 +32,7 @@ body {
   align-items: center;
 }
 
+/* 手排 */
 .hand-cards {
   display: flex;
   gap: 10px;
@@ -64,13 +64,13 @@ body {
   margin-bottom: 10px;
 }
 
-/* 卡片樣式 */
+/* 卡片 */
 .card {
   border: 1px solid #333;
   background: #eee;
   cursor: pointer;
   width: 120px;
-  height: 220px; 
+  height: 220px;
   position: relative;
 }
 .card.selected {
@@ -89,10 +89,8 @@ body {
 }
 .card-image-area {
   position: absolute;
-  top: 30px; 
-  left: 10px;
-  width: 100px; 
-  height: 60px;
+  top: 30px; left: 10px;
+  width: 100px; height: 60px;
   background-color: #ccc;
 }
 .card-name {
@@ -119,7 +117,8 @@ body {
   font-weight: bold;
   color: #111;
 }
-/* tooltip: hover 顯示 */
+
+/* tooltip: hover顯示 */
 .tooltip {
   position: absolute;
   top: 10px;
@@ -129,17 +128,16 @@ body {
   color: #333;
   border: 1px solid #aaa;
   padding: 5px;
-  display: none; 
+  display: none;
   z-index: 99;
 }
 .card:hover .tooltip {
   display: block;
 }
 
-/* 地塊 (hex tile) */
+/* 六邊形地塊 */
 .hex-tile {
-  width: 80px; 
-  height: 80px;
+  width: 80px; height: 80px;
   clip-path: polygon(
     50% 0%,
     93% 25%,
@@ -148,11 +146,8 @@ body {
     7% 75%,
     7% 25%
   );
-  display: flex; 
-  justify-content: center; 
-  align-items: center;
-  font-size: 14px;
-  color: #fff;
+  display: flex; justify-content: center; align-items: center;
+  font-size: 14px; color: #fff;
   position: absolute;
 }
 .city-tile {
@@ -175,10 +170,8 @@ body {
   width: 100%; height: 100%;
   background: rgba(0,0,0,0.8);
   color: #fff;
-  display: flex; 
-  flex-direction: column;
-  justify-content: center; 
-  align-items: center;
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
   z-index: 1000;
 }
 .start-screen h1 {
@@ -200,9 +193,8 @@ body {
   top: 0; left: 0;
   width: 100%; height: 100%;
   background: rgba(10,10,10,0.6);
-  display: none; 
-  justify-content: center; 
-  align-items: center;
+  display: none;
+  justify-content: center; align-items: center;
   z-index: 1001;
 }
 .info-content {
@@ -210,8 +202,7 @@ body {
   padding: 20px;
   border-radius: 8px;
   color: #333;
-  max-width: 300px;
-  width: 80%;
+  max-width: 300px; width: 80%;
   text-align: left;
   position: relative;
 }
