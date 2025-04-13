@@ -355,6 +355,18 @@ if(tile.type === 'city') {
     }
 }
 if(tile.type === 'river') produceVal -= 1;
+    // 新增：如果建築的標籤為「貧民窟」且地塊類型也是 slum，則每相鄰一棟已放置建築，產出加 1 金幣（最多 +5）
+if(tile.type === 'slum' && cardElem.dataset.label === '貧民窟'){
+    let adjacentCount = 0;
+    tile.adjacency.forEach(nbId => {
+        const nbTile = tileMap.find(t => t.id === nbId);
+        if(nbTile && nbTile.buildingPlaced){
+            adjacentCount++;
+        }
+    });
+    let bonus = Math.min(adjacentCount, 5);
+    produceVal += bonus;
+}
     tile.buildingProduce = produceVal;
     tile.buildingPlaced = true;
     // 將手牌的卡牌從手排移除，並在地塊上顯示卡名
