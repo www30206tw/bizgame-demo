@@ -4,29 +4,27 @@ body {
   font-family: sans-serif;
 }
 
-/* 頂部與底部 */
-.top-bar, .bottom-bar {
+/* 頂部、底部欄位 */
+.top-bar,
+.bottom-bar {
   background: pink;
   padding: 10px;
   display: flex;
   justify-content: space-between;
 }
 
-/* 中間區域 */
+/* 中間主畫面 */
 .middle-section {
   display: flex;
   background: #74b9ff;
-  height: 650px; /* 容納7行地塊 */
+  height: 650px;
 }
-
 .map-area {
   flex: 1;
   position: relative;
   margin: 20px;
   border: 1px solid #aaa;
 }
-
-/* 側邊欄 */
 .sidebar {
   width: 60px;
   background: #ddd;
@@ -55,7 +53,7 @@ body {
   top: 0; left: 0;
   width: 100%; height: 100%;
   background: rgba(10,10,10,0.5);
-  display: none;
+  display: none; 
   justify-content: center;
   align-items: center;
   z-index: 999;
@@ -73,15 +71,16 @@ body {
   background: #eee;
   cursor: pointer;
   width: 120px;
-  height: 180px;
+  height: 200px; /* 調高以容納標籤 & tooltip */
   position: relative;
+  margin-right: 5px;
 }
 .card.selected {
   outline: 3px solid yellow;
 }
 .card-gold-output {
   position: absolute;
-  top: 5px;
+  top: 5px; 
   left: 5px;
   width: 24px; 
   height: 24px;
@@ -115,20 +114,38 @@ body {
   font-size: 14px;
   color: #444;
 }
-.card-ability {
+
+/* 建築標籤 (如 繁華區 / 貧民窟 / 河流 / 荒原) */
+.card-label {
   position: absolute;
   top: 145px;
-  left: 10px;
-  width: 100px;
-  height: 30px;
-  font-size: 12px;
+  width: 100%;
+  text-align: center;
+  font-size: 14px;
+  color: #111;
+  font-weight: bold;
+}
+
+/* tooltip - 當滑鼠移至卡片上時，右側顯示懸浮框 */
+.tooltip {
+  position: absolute;
+  top: 10px; 
+  left: 130px; /* 在卡片右側 */
+  width: 180px;
+  background: #fff;
   color: #333;
-  background-color: #f2f2f2;
+  border: 1px solid #aaa;
+  padding: 5px;
+  display: none; 
+  z-index: 99;
+}
+.card:hover .tooltip {
+  display: block;
 }
 
 /* 六邊形地塊 */
 .hex-tile {
-  width: 80px;
+  width: 80px; 
   height: 80px;
   clip-path: polygon(
     50% 0%,
@@ -145,23 +162,22 @@ body {
   color: #fff;
   position: absolute;
 }
-
-/* 地塊類型顏色 */
-.wasteland-tile { background-color: #d4ac0d; } /* 荒原 */
-.slum-tile      { background-color: #2c2c2c; } /* 貧民窟 */
-.river-tile     { background-color: #2980b9; } /* 河流 */
-.city-tile      { background-color: #8e44ad; } /* 繁華區 */
+.wasteland-tile { background-color: #d4ac0d; }
+.slum-tile      { background-color: #2c2c2c; }
+.river-tile     { background-color: #2980b9; }
+.city-tile      { background-color: #8e44ad; }
 
 /* 遊戲開始畫面 */
 .start-screen {
   position: fixed;
   top: 0; left: 0;
-  width: 100%; height: 100%;
+  width: 100%; 
+  height: 100%;
   background: rgba(0,0,0,0.8);
   color: #fff;
-  display: flex;
+  display: flex; 
   flex-direction: column;
-  justify-content: center;
+  justify-content: center; 
   align-items: center;
   z-index: 1000;
 }
@@ -177,10 +193,11 @@ body {
 .info-modal {
   position: fixed;
   top: 0; left: 0;
-  width: 100%; height: 100%;
+  width: 100%; 
+  height: 100%;
   background: rgba(10,10,10,0.6);
-  display: none;
-  justify-content: center;
+  display: none; 
+  justify-content: center; 
   align-items: center;
   z-index: 1001;
 }
@@ -189,7 +206,7 @@ body {
   padding: 20px;
   border-radius: 8px;
   color: #333;
-  max-width: 300px;
+  max-width: 300px; 
   width: 80%;
   text-align: left;
   position: relative;
