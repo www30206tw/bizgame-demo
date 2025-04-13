@@ -189,15 +189,18 @@ window.onload = function(){
       <div class="tooltip">${info.label}：${labelEffectDesc[info.label] || ""}</div>
     `;
     // 拖曳時手排卡隱藏
-    card.draggable = true;
-    card.addEventListener('dragstart', e=>{
-      e.dataTransfer.setData('cardId', card.dataset.cardId);
-      e.dataTransfer.setData('text/plain', info.name);
-      setTimeout(()=>{ card.style.display = 'none'; }, 0);
-    });
-    card.addEventListener('dragend', e=>{
-      card.style.display = '';
-    });
+     let dragClone = null;
+ card.addEventListener('dragstart', e => {
+   e.dataTransfer.setData('cardId', card.dataset.cardId);
+   e.dataTransfer.setData('text/plain', info.name);
+   dragClone = card.cloneNode(true);
+   dragClone.style.position = 'absolute';
+   dragClone.style.left = '-9999px';
+   dragClone.style.top = '-9999px';
+   document.body.appendChild(dragClone);
+   e.dataTransfer.setDragImage(dragClone, 0, 0);
+   setTimeout(() => { card.style.display = 'none'; }, 0);
+ });
     return card;
   }
 
