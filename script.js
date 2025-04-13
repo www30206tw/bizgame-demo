@@ -1,13 +1,20 @@
-/********************
- * Slum BFS: fix double-add issue
- ********************/
-let cardIdCounter=0;
-window.onload=function(){
-  let currentRound=1;
-  let currentGold=0;
-  let roundRevenue=0;
-  let refreshCount=0;
+/*******************************
+ * script.js (卡池 & 標籤介面)
+ *******************************/
+let cardIdCounter = 0;
 
+window.onload = function() {
+  /*******************
+   * 遊戲狀態
+   *******************/
+  let currentRound   = 1;
+  let currentGold    = 0;
+  let roundRevenue   = 0;
+  let refreshCount   = 0;
+
+  /*******************
+   * DOM
+   *******************/
   const startScreen     = document.getElementById('start-screen');
   const drawSection     = document.getElementById('draw-section');
   const cardPool        = document.getElementById('card-pool');
@@ -22,9 +29,9 @@ window.onload=function(){
   const infoModal       = document.getElementById('info-modal');
   const closeInfoBtn    = document.getElementById('close-info-btn');
 
-  const selectedCards=[];
+  const selectedCards   = [];
 
-  // 1) 建立31塊
+  // 1) 建立地塊
   function createTileMap31(){
     const rows=[4,5,4,5,4,5,4];
     const typeMapping={
@@ -55,9 +62,9 @@ window.onload=function(){
     }
     return map;
   }
-  let tileMap=createTileMap31();
+  let tileMap = createTileMap31();
 
-  // 2) adjacency
+  // odd-r offset adjacency
   const directionsEven=[
     {dr:-1,dc:0},{dr:-1,dc:1},{dr:0,dc:-1},{dr:0,dc:1},{dr:1,dc:0},{dr:1,dc:1}
   ];
@@ -70,20 +77,18 @@ window.onload=function(){
       dirSet.forEach(d=>{
         const nr=tile.row+d.dr;
         const nc=tile.col+d.dc;
-        const nb=tileMap.find(t=>t.row===nr && t.col===nc);
-        if(nb){
-          tile.adjacency.push(nb.id);
-        }
+        const nb=tileMap.find(x=>x.row===nr && x.col===nc);
+        if(nb) tile.adjacency.push(nb.id);
       });
     });
   }
   computeAdj();
 
-  // 3) 絕對定位
+  // 絕對定位
   function initMapArea(){
     mapArea.innerHTML='';
     const tileW=80, tileH=80;
-    const verticalSpacing=tileH*0.75; 
+    const verticalSpacing=tileH*0.75;
     const offsetX=tileW/2;
     let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
     tileMap.forEach(tile=>{
@@ -108,6 +113,7 @@ window.onload=function(){
       else if(tile.type==='slum') hex.classList.add('slum-tile');
       else if(tile.type==='river') hex.classList.add('river-tile');
       else hex.classList.add('wasteland-tile');
+
       hex.dataset.tileId=tile.id;
       hex.textContent='?';
 
@@ -116,12 +122,13 @@ window.onload=function(){
       hex.style.left=px+'px';
       hex.style.top=py+'px';
 
+      // 拖曳放置
       hex.ondragover=e=>e.preventDefault();
       hex.ondrop=e=>{
         e.preventDefault();
         const cardId=e.dataTransfer.getData('cardId');
         const cardElem=hand.querySelector(`[data-card-id="${cardId}"]`);
-        if(!cardElem) return;
+        if(!cardElem)return;
         placeBuildingOnTile(tile, cardElem);
       };
       mapArea.appendChild(hex);
@@ -140,46 +147,70 @@ window.onload=function(){
     refreshBtn.textContent=`刷新卡片(${cost} 金幣)`;
   }
 
-  // 建築卡
-  function createBuildingCard(name){
-    const produceAmount=6;
+  /***********************************************
+   * 卡池：8 張牌 (名稱 / 稀有度 / 標籤 / 產出=6)
+   ***********************************************/
+  const cardPoolData = [
+    { name:'建築A', rarity:'普通',  label:'荒原',   baseProduce:6 },
+    { name:'建築B', rarity:'普通',  label:'貧民窟', baseProduce:6 },
+    { name:'建築C', rarity:'稀有',  label:'荒原',   baseProduce:6 },
+    { name:'建築D', rarity:'稀有',  label:'貧民窟', baseProduce:6 },
+    { name:'建築E', rarity:'史詩',  label:'繁華區', baseProduce:6 },
+    { name:'建築F', rarity:'史詩',  label:'河流',   baseProduce:6 },
+    { name:'建築G', rarity:'傳說',  label:'繁華區', baseProduce:6 },
+    { name:'建築H', rarity:'傳說',  label:'河流',   baseProduce:6 },
+  ];
+
+  // 標籤能力敘述 (hover tooltip 只顯示文字, 不執行效果)
+  const labelEffectDesc = {
+    "繁華區": "若此建築物蓋在繁華區，則回合結束時此建築的產出+4金幣",
+    "貧民窟": "若此建築物蓋在貧民區，相鄰地塊每有一座有貧民窟標籤的建築 => +1金幣",
+    "河流":   "若此建築物蓋在河流上，回合結束時此建築+3, 且周圍建築隨機一棟翻倍產出",
+    "荒原":   "若此建築物蓋在荒原上, 50%不產出, 50%地塊轉貧民窟"
+  };
+
+  function createBuildingCard(cardInfo){
+    const {name, rarity, label, baseProduce} = cardInfo;
     const card=document.createElement('div');
     card.className='card';
     card.dataset.type='building';
-    card.dataset.produce=produceAmount;
+    card.dataset.produce=baseProduce;
     card.dataset.cardId=++cardIdCounter;
 
     card.innerHTML=`
-      <div class="card-gold-output">${produceAmount}</div>
+      <div class="card-gold-output">${baseProduce}</div>
       <div class="card-image-area"></div>
       <div class="card-name">${name}</div>
-      <div class="card-rarity">普通</div>
+      <div class="card-rarity">${rarity}</div>
+      <div class="card-label">${label}</div>
+      <!-- tooltip -->
+      <div class="tooltip">
+        ${label}：${labelEffectDesc[label] || ""}
+      </div>
     `;
+
+    // 拖曳 => 手排卡片消失
     card.draggable=true;
     card.addEventListener('dragstart', e=>{
       e.dataTransfer.setData('cardId', card.dataset.cardId);
       e.dataTransfer.setData('text/plain', name);
-      // 手排的卡在拖曳時隱藏
       setTimeout(()=>{ card.style.display='none'; },0);
     });
     card.addEventListener('dragend', e=>{
       card.style.display='';
     });
+
     return card;
   }
-  function shuffle(arr){
-    for(let i=arr.length-1;i>0;i--){
-      const j=Math.floor(Math.random()*(i+1));
-      [arr[i],arr[j]]=[arr[j],arr[i]];
-    }
-    return arr;
-  }
+
+  // 從 cardPoolData 中抽 5 張
   function drawCards(){
     cardPool.innerHTML='';
-    const possible=["建築A","建築B","建築C","建築D","建築E"];
-    const drawn=shuffle(possible.slice()).slice(0,5);
-    drawn.forEach(name=>{
-      const card=createBuildingCard(name);
+    // 洗牌 => 取5
+    const arr = shuffle(cardPoolData.slice());
+    const five = arr.slice(0,5);
+    five.forEach(info=>{
+      const card=createBuildingCard(info);
       card.onclick=()=>{
         if(selectedCards.includes(card)){
           card.classList.remove('selected');
@@ -203,6 +234,7 @@ window.onload=function(){
     refreshCount++;
     updateResourceDisplay();
     updateRefreshButton();
+
     selectedCards.length=0;
     drawCards();
   };
@@ -217,8 +249,38 @@ window.onload=function(){
       return;
     }
     selectedCards.forEach(c=>{
-      const copy=createBuildingCard(c.querySelector('.card-name').innerText);
-      hand.appendChild(copy);
+      // 依 c 的資料構造新的
+      const baseProduce=parseInt(c.dataset.produce)||6;
+      const cName=c.querySelector('.card-name').innerText;
+      const cRarity=c.querySelector('.card-rarity').innerText;
+      const cLabel=c.querySelector('.card-label').innerText;
+      // 生成一張卡
+      const newCard=document.createElement('div');
+      newCard.className='card';
+      newCard.dataset.type='building';
+      newCard.dataset.produce=baseProduce;
+      newCard.dataset.cardId=++cardIdCounter;
+
+      newCard.innerHTML=`
+        <div class="card-gold-output">${baseProduce}</div>
+        <div class="card-image-area"></div>
+        <div class="card-name">${cName}</div>
+        <div class="card-rarity">${cRarity}</div>
+        <div class="card-label">${cLabel}</div>
+        <div class="tooltip">${cLabel}：${labelEffectDesc[cLabel]||""}</div>
+      `;
+      // 同樣 dragstart => 手排消失
+      newCard.draggable=true;
+      newCard.addEventListener('dragstart', ee=>{
+        ee.dataTransfer.setData('cardId', newCard.dataset.cardId);
+        ee.dataTransfer.setData('text/plain', cName);
+        setTimeout(()=>{ newCard.style.display='none'; },0);
+      });
+      newCard.addEventListener('dragend', ee=>{
+        newCard.style.display='';
+      });
+
+      hand.appendChild(newCard);
     });
     drawSection.style.display='none';
   };
@@ -230,69 +292,76 @@ window.onload=function(){
     drawCards();
   };
 
-  /*******************
+  /***********************
    * placeBuildingOnTile
-   *******************/
+   ***********************/
   function placeBuildingOnTile(tile, cardElem){
-    // 若已有建築 => 先扣除舊產出
+    console.log(`placeBuildingOnTile => tile#${tile.id}`);
+    // 若已有建築 => 扣除舊產出
     if(tile.buildingPlaced){
       roundRevenue-=tile.buildingProduce;
       tile.buildingProduce=0;
       tile.slumBonusGranted=false;
     }
+
+    // 基礎= cardElem.dataset.produce (=6)
     let produceVal=parseInt(cardElem.dataset.produce)||6;
-    if(tile.type==='city') produceVal+=2;
-    if(tile.type==='river') produceVal-=1;
+    if(tile.type==='city') produceVal+=2;   // city => +2
+    if(tile.type==='river') produceVal-=1; // river => -1
 
     tile.buildingProduce=produceVal;
     tile.buildingPlaced=true;
+
+    // 更新地塊顯示
     const hex=mapArea.querySelector(`[data-tile-id="${tile.id}"]`);
-    hex.textContent= cardElem.querySelector('.card-name').innerText;
+    const bName=cardElem.querySelector('.card-name').innerText;
+    hex.textContent=bName;
+
+    // 手排移除
     cardElem.remove();
 
+    // 若是slum => BFS
     if(tile.type==='slum'){
-      recalcSlumBonus(); 
+      recalcSlumBonus();
     } else {
-      // 若不是 slum => 直接更新回合收益
-      roundRevenue += tile.buildingProduce;
+      roundRevenue+=tile.buildingProduce;
       updateResourceDisplay();
     }
   }
 
-  // BFS：修正 => 先把所有 slum tile produce 重置，再統一 +1
+  // BFS: slum cluster >=3 => +1 (修正)
   function recalcSlumBonus(){
     console.log("recalcSlumBonus()");
-    // A) 先重置所有slum tile的產出(基礎:6 ± city/river)
+
+    // A) 重置所有 slum tile produce => 6 ± city/river
     tileMap.forEach(t=>{
       if(t.buildingPlaced && t.type==='slum'){
         t.slumBonusGranted=false;
         let base=6;
-        // city => +2 => 這裡沒有 city+slum 同時出現理論? (若地圖可同時 city+slum？那就 base+2)
-        // 但如果地圖類型只單選: city / slum / river / wasteland
-        // -> 只要保留這裡給未來擴充
+        // city+slum theoretically not co-exist, but keep for expansion
         if(t.type==='city')  base+=2;
         if(t.type==='river') base-=1;
         t.buildingProduce=base;
       }
     });
 
-    // B) BFS => cluster >=3 => +1
+    // B) BFS
     const visited=new Set();
     tileMap.forEach(tile=>{
       if(tile.type==='slum' && tile.buildingPlaced && !visited.has(tile.id)){
         let cluster=[];
         let queue=[tile.id];
         while(queue.length>0){
-          let curr=queue.shift();
-          if(visited.has(curr)) continue;
-          visited.add(curr);
-          const currTile=tileMap.find(x=>x.id===curr);
+          let currId=queue.shift();
+          if(visited.has(currId)) continue;
+          visited.add(currId);
+          const currTile=tileMap.find(x=>x.id===currId);
           if(currTile && currTile.type==='slum' && currTile.buildingPlaced){
             cluster.push(currTile);
             currTile.adjacency.forEach(nbId=>{
               if(!visited.has(nbId)){
-                const nbT = tileMap.find(x=>x.id===nbId);
-                if(nbT && nbT.type==='slum' && nbT.buildingPlaced){
+                const nb=tileMap.find(x=>x.id===nbId);
+                if(nb && nb.type==='slum' && nb.buildingPlaced){
                   queue.push(nbId);
                 }
               }
@@ -311,11 +380,10 @@ window.onload=function(){
       }
     });
 
-    // C) 統一重新計算 roundRevenue
+    // C) 重算 roundRevenue
     recalcRevenueFromScratch();
   }
 
-  // 重新計算回合收益
   function recalcRevenueFromScratch(){
     let sum=0;
     tileMap.forEach(t=>{
@@ -327,19 +395,18 @@ window.onload=function(){
     updateResourceDisplay();
   }
 
-  // 回合結束 => 把 roundRevenue 加到 currentGold
-  endTurnBtn.addEventListener('click', ()=>{
-    currentGold += roundRevenue;
+  // 回合結束 => gold += roundRevenue
+  endTurnBtn.addEventListener('click',()=>{
+    currentGold+=roundRevenue;
     currentRound++;
     updateRoundDisplay();
     updateResourceDisplay();
-    // 進下一回合
     window.startDrawPhase();
   });
 
-  // 監聽鍵盤 => startGame
+  // StartGame
   document.addEventListener('keydown', e=>{
-    if(startScreen.style.display!=='none' && (e.key==='Enter' || e.key==='NumpadEnter')){
+    if(startScreen.style.display!=='none' && (e.key==='Enter'||e.key==='NumpadEnter')){
       startGame();
     }
   });
@@ -354,10 +421,10 @@ window.onload=function(){
   }
 
   // info
-  infoBtn.addEventListener('click', ()=>{
+  infoBtn.addEventListener('click',()=>{
     infoModal.style.display='flex';
   });
-  closeInfoBtn.addEventListener('click', ()=>{
+  closeInfoBtn.addEventListener('click',()=>{
     infoModal.style.display='none';
   });
 };
