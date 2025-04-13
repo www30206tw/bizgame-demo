@@ -420,15 +420,55 @@ if(tile.type === 'slum' && cardElem.dataset.label === '貧民窟'){
   }
 
   function recalcRevenueFromScratch(){
-    let sum = 0;
-    tileMap.forEach(t=>{
-      if(t.buildingPlaced){
-        sum += t.buildingProduce;
+  let total = 0;
+  
+  // 重新計算各地塊的產出（不含貧民窟相鄰加成）
+  tileMap.forEach(t => {
+    if(!t.buildingPlaced) return;
+    
+    // 取出前面在 placeBuildingOnTile 中記錄的實際基礎產出與標籤
+    let baseP = t.buildingBaseProduce;  
+    let label = t.buildingLabel;
+    
+    let produceVal = baseP;
+    if(t.type === 'city'){
+      produceVal += 2;
+      if(label === '繁華區'){
+        produceVal += 4;
       }
-    });
-    roundRevenue = sum;
-    updateResourceDisplay();
-  }
+    } else if(t.type === 'river'){
+      produceVal -= 1;
+    }
+    // 將初步計算結果記回
+    t.buildingProduce = produceVal;
+  });
+  
+  // 統一計算「貧民窟」標籤的相鄰建築加成
+  tileMap.forEach(t => {
+    if(!t.buildingPlaced) return;
+    if(t.type === 'slum' && t.buildingLabel === '貧民窟'){
+      let adjacentCount = 0;
+      t.adjacency.forEach(nbId => {
+         const nbTile = tileMap.find(x => x.id === nbId);
+         if(nbTile && nbTile.buildingPlaced){
+            adjacentCount++;
+         }
+      });
+      let bonus = Math.min(adjacentCount, 5);
+      t.buildingProduce += bonus;
+    }
+  });
+  
+  // 加總所有地塊產出
+  tileMap.forEach(t => {
+    if(t.buildingPlaced){
+      total += t.buildingProduce;
+    }
+  });
+  
+  roundRevenue = total;
+  updateResourceDisplay();
+}
 
   /***********************
    * 回合結束
