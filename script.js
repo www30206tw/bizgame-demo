@@ -293,6 +293,11 @@ newCard.addEventListener('dragstart', e => {
   dragClone.style.position = 'absolute';
   dragClone.style.left = '-9999px';
   dragClone.style.top = '-9999px';
+  // 隱藏 tooltip
+  const tooltipElem = dragClone.querySelector('.tooltip');
+  if (tooltipElem) {
+    tooltipElem.style.display = 'none';
+  }
   document.body.appendChild(dragClone);
   e.dataTransfer.setDragImage(dragClone, 0, 0);
   setTimeout(() => { newCard.style.display = 'none'; }, 0);
