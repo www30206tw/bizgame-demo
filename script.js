@@ -347,8 +347,14 @@ newCard.addEventListener('dragend', e => {
       tile.slumBonusGranted = false;
     }
     let produceVal = parseInt(cardElem.dataset.produce) || 6;
-    if(tile.type === 'city') produceVal += 2;
-    if(tile.type === 'river') produceVal -= 1;
+if(tile.type === 'city') {
+    produceVal += 1; // 調整城市地塊基礎效果為 +1
+    // 如果建築標籤為「繁華區」，額外增加 +4
+    if(cardElem.dataset.label === '繁華區'){
+        produceVal += 4;
+    }
+}
+if(tile.type === 'river') produceVal -= 1;
     tile.buildingProduce = produceVal;
     tile.buildingPlaced = true;
     // 將手牌的卡牌從手排移除，並在地塊上顯示卡名
