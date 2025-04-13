@@ -1,4 +1,4 @@
-// 確保只引用此一份 script.js，不重複宣告
+// 確保只引入此一份 script.js
 let cardIdCounter = 0;
 window.onload = function() {
   /*******************
@@ -30,13 +30,13 @@ window.onload = function() {
 
   /*******************
    * 3. 建立 31 塊地塊 (7 行：分別 4,5,4,5,4,5,4)
-   * 編號依行從左至右遞增。型態依照下表：
-   * 1:荒原, 2:荒原, 3:荒原, 4:荒原,
-   * 5:荒原, 6:貧民窟, 7:貧民窟, 8:荒原, 9:河流, 10:貧民窟,
-   * 11:繁華區, 12:貧民窟, 13:河流, 14:貧民窟, 15:繁華區, 16:繁華區,
-   * 17:河流, 18:荒原, 19:貧民窟, 20:貧民窟, 21:河流, 22:荒原,
-   * 23:荒原, 24:貧民窟, 25:河流, 26:荒原, 27:荒原, 28:荒原, 29:河流,
-   * 30:荒原, 31:荒原
+   * 編號依行從左至右遞增；類型依下表：
+   *  1:荒原, 2:荒原, 3:荒原, 4:荒原,
+   *  5:荒原, 6:貧民窟, 7:貧民窟, 8:荒原, 9:河流, 10:貧民窟,
+   *  11:繁華區, 12:貧民窟, 13:河流, 14:貧民窟, 15:繁華區, 16:繁華區,
+   *  17:河流, 18:荒原, 19:貧民窟, 20:貧民窟, 21:河流, 22:荒原,
+   *  23:荒原, 24:貧民窟, 25:河流, 26:荒原, 27:荒原, 28:荒原, 29:河流,
+   *  30:荒原, 31:荒原
    *******************/
   function createTileMap31() {
     const rows = [4, 5, 4, 5, 4, 5, 4];
@@ -73,8 +73,8 @@ window.onload = function() {
   /*******************
    * 4. 計算鄰接 (odd‑r offset)
    * 規則：
-   * - 偶數行 (row 0,2,4,6)：使用 directionsEven (無水平偏移)
-   * - 奇數行 (row 1,3,5)：使用 directionsOdd (向左偏移)
+   * - 偶數行 (row 0,2,4,6): 使用 directionsEven
+   * - 奇數行 (row 1,3,5): 使用 directionsOdd
    *******************/
   const directionsEven = [
     { dr: -1, dc: 0 },
@@ -108,8 +108,8 @@ window.onload = function() {
   computeAdjacency();
 
   /*******************
-   * 5. 絕對定位地塊置中
-   *   計算時若 row 為奇數，向左移 offsetX (即 -tileWidth/2)
+   * 5. 絕對定位並置中地圖
+   * 奇數行 (row=1,3,5) 向左移 offsetX (80/2 = 40)
    *******************/
   function initMapArea() {
     mapArea.innerHTML = '';
@@ -117,32 +117,34 @@ window.onload = function() {
     const verticalSpacing = tileHeight * 0.75;
     const offsetX = tileWidth / 2;
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    const coords = tileMap.map(tile => {
+    // 直接在 tileMap 中設定 x 與 y（修改原本物件）
+    tileMap.forEach(tile => {
       const shiftLeft = (tile.row % 2 === 1);
       const x = tile.col * tileWidth + (shiftLeft ? -offsetX : 0);
       const y = tile.row * verticalSpacing;
+      tile.x = x;
+      tile.y = y;
       minX = Math.min(minX, x);
       maxX = Math.max(maxX, x);
       minY = Math.min(minY, y);
       maxY = Math.max(maxY, y);
-      return { ...tile, x, y };
     });
     const shapeW = maxX - minX + tileWidth;
     const shapeH = maxY - minY + tileHeight;
     const mapW = mapArea.clientWidth, mapH = mapArea.clientHeight;
     const centerX = (mapW - shapeW) / 2;
     const centerY = (mapH - shapeH) / 2;
-    coords.forEach(c => {
+    tileMap.forEach(tile => {
       const hex = document.createElement('div');
       hex.className = 'hex-tile';
-      if      (c.type === 'city')  hex.classList.add('city-tile');
-      else if (c.type === 'slum')  hex.classList.add('slum-tile');
-      else if (c.type === 'river') hex.classList.add('river-tile');
-      else                         hex.classList.add('wasteland-tile');
-      hex.dataset.tileId = c.id;
+      if      (tile.type === 'city')  hex.classList.add('city-tile');
+      else if (tile.type === 'slum')  hex.classList.add('slum-tile');
+      else if (tile.type === 'river') hex.classList.add('river-tile');
+      else                           hex.classList.add('wasteland-tile');
+      hex.dataset.tileId = tile.id;
       hex.textContent = '?';
-      const px = c.x - minX + centerX;
-      const py = c.y - minY + centerY;
+      const px = tile.x - minX + centerX;
+      const py = tile.y - minY + centerY;
       hex.style.left = px + 'px';
       hex.style.top = py + 'px';
       hex.ondragover = e => e.preventDefault();
@@ -151,7 +153,7 @@ window.onload = function() {
         const cardId = e.dataTransfer.getData('cardId');
         const cardElem = hand.querySelector(`[data-card-id="${cardId}"]`);
         if (!cardElem) return;
-        placeBuildingOnTile(c, cardElem);
+        placeBuildingOnTile(tile, cardElem);
       };
       mapArea.appendChild(hex);
     });
@@ -198,22 +200,22 @@ window.onload = function() {
     return card;
   }
   function shuffle(array) {
-    for (let i = array.length-1; i>0; i--) {
-      const j = Math.floor(Math.random()*(i+1));
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
       [array[i], array[j]] = [array[j], array[i]];
     }
     return array;
   }
   function drawCards() {
     cardPool.innerHTML = '';
-    const possibleBuildings = ["建築A","建築B","建築C","建築D","建築E"];
-    const drawn = shuffle(possibleBuildings.slice()).slice(0,5);
+    const possibleBuildings = ["建築A", "建築B", "建築C", "建築D", "建築E"];
+    const drawn = shuffle(possibleBuildings.slice()).slice(0, 5);
     drawn.forEach(bName => {
       const card = createBuildingCard(bName);
       card.onclick = () => {
         if (selectedCards.includes(card)) {
           card.classList.remove('selected');
-          selectedCards.splice(selectedCards.indexOf(card),1);
+          selectedCards.splice(selectedCards.indexOf(card), 1);
         } else if (selectedCards.length < 2) {
           card.classList.add('selected');
           selectedCards.push(card);
@@ -283,10 +285,12 @@ window.onload = function() {
     updateResourceDisplay();
   }
 
-  // recalcSlumBonus：使用 BFS 找出每個連通的 slum 集群，若成員數 ≥ 3，則整個集群各 +1
+  /*******************
+   * 9. recalcSlumBonus - BFS 找連通 slum 集群；若集群成員數 ≥ 3，則每一塊 +1
+   *******************/
   function recalcSlumBonus() {
     console.log("recalcSlumBonus() 被呼叫");
-    // 先重置所有已加成的 slum (若已加成則移除)
+    // 先重設所有 slum tile bonus (若先前已加成)
     tileMap.forEach(t => {
       if (t.type === 'slum' && t.buildingPlaced && t.slumBonusGranted) {
         roundRevenue -= t.buildingProduce;
@@ -331,7 +335,7 @@ window.onload = function() {
   }
 
   /*******************
-   * 9. 回合流程 & UI 更新
+   * 10. 回合流程與 UI 更新
    *******************/
   function updateRoundDisplay() {
     roundNumberElem.innerText = currentRound;
