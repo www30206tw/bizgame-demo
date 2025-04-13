@@ -72,7 +72,7 @@ body {
   background: #eee;
   cursor: pointer;
   width: 120px;
-  height: 220px; /* 調高以容納標籤 & tooltip */
+  height: 220px; 
   position: relative;
 }
 .card.selected {
@@ -114,7 +114,6 @@ body {
   font-size: 14px;
   color: #444;
 }
-/* 顯示標籤 */
 .card-label {
   position: absolute;
   top: 145px;
@@ -129,7 +128,7 @@ body {
 .tooltip {
   position: absolute;
   top: 10px; 
-  left: 130px; /* 在卡片右側 */
+  left: 130px;
   width: 180px;
   background: #fff;
   color: #333;
