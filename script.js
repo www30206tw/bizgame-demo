@@ -190,17 +190,24 @@ window.onload = function(){
     `;
     // 拖曳時手排卡隱藏
      let dragClone = null;
- card.addEventListener('dragstart', e => {
-   e.dataTransfer.setData('cardId', card.dataset.cardId);
-   e.dataTransfer.setData('text/plain', info.name);
-   dragClone = card.cloneNode(true);
-   dragClone.style.position = 'absolute';
-   dragClone.style.left = '-9999px';
-   dragClone.style.top = '-9999px';
-   document.body.appendChild(dragClone);
-   e.dataTransfer.setDragImage(dragClone, 0, 0);
-   setTimeout(() => { card.style.display = 'none'; }, 0);
- });
+card.addEventListener('dragstart', e => {
+  e.dataTransfer.setData('cardId', card.dataset.cardId);
+  e.dataTransfer.setData('text/plain', info.name);
+  dragClone = card.cloneNode(true);
+  dragClone.style.position = 'absolute';
+  dragClone.style.left = '-9999px';
+  dragClone.style.top = '-9999px';
+  document.body.appendChild(dragClone);
+  e.dataTransfer.setDragImage(dragClone, 0, 0);
+  setTimeout(() => { card.style.display = 'none'; }, 0);
+});
+card.addEventListener('dragend', e => {
+  card.style.display = '';
+  if (dragClone) {
+    document.body.removeChild(dragClone);
+    dragClone = null;
+  }
+});
     return card;
   }
 
