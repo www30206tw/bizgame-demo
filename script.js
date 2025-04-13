@@ -289,19 +289,32 @@ card.addEventListener('dragend', e => {
 newCard.addEventListener('dragstart', e => {
   e.dataTransfer.setData('cardId', newCard.dataset.cardId);
   e.dataTransfer.setData('text/plain', cName);
+
+  // 建立拖曳預覽的克隆物件
   dragClone = newCard.cloneNode(true);
   dragClone.style.position = 'absolute';
   dragClone.style.left = '-9999px';
   dragClone.style.top = '-9999px';
-  // 隱藏 tooltip
+
+  // 隱藏克隆中的 tooltip（保留 DOM 結構但不顯示）
   const tooltipElem = dragClone.querySelector('.tooltip');
   if (tooltipElem) {
     tooltipElem.style.display = 'none';
   }
+
   document.body.appendChild(dragClone);
-  e.dataTransfer.setDragImage(dragClone, 0, 0);
+
+  // 計算使用者點擊位置相對於卡牌左上角的偏移
+  const rect = newCard.getBoundingClientRect();
+  const offsetX = e.clientX - rect.left;
+  const offsetY = e.clientY - rect.top;
+  
+  // 傳入正確的偏移量
+  e.dataTransfer.setDragImage(dragClone, offsetX, offsetY);
+
   setTimeout(() => { newCard.style.display = 'none'; }, 0);
 });
+
 newCard.addEventListener('dragend', e => {
   newCard.style.display = '';
   if (dragClone) {
@@ -309,7 +322,6 @@ newCard.addEventListener('dragend', e => {
     dragClone = null;
   }
 });
-
       hand.appendChild(newCard);
     });
     drawSection.style.display = 'none';
