@@ -339,53 +339,40 @@ newCard.addEventListener('dragend', e => {
    * placeBuildingOnTile (放置建築)
    ***********************/
   function placeBuildingOnTile(tile, cardElem){
-    console.log(`placeBuildingOnTile => tile#${tile.id} type=${tile.type}`);
-    // 若已有建築先扣除
-    if(tile.buildingPlaced){
-      roundRevenue -= tile.buildingProduce;
-      tile.buildingProduce = 0;
-      tile.slumBonusGranted = false;
-    }
-    tile.buildingBaseProduce = parseInt(cardElem.dataset.produce) || 6;
-    tile.buildingLabel = cardElem.dataset.label || "";
-    // 接著依據地塊計算產出
-    let produceVal = tile.buildingBaseProduce;
-    if(tile.type === 'city') {
-    produceVal += 2; // 調整城市地塊基礎效果為 +2
-    // 如果建築標籤為「繁華區」，額外增加 +4
+  console.log(`placeBuildingOnTile => tile#${tile.id} type=${tile.type}`);
+  // 若已有建築先扣除
+  if(tile.buildingPlaced){
+    roundRevenue -= tile.buildingProduce;
+    tile.buildingProduce = 0;
+    tile.slumBonusGranted = false;
+  }
+  // 記錄該建築的基礎產出與標籤（使用卡牌內的數值，不固定預設為6）
+  tile.buildingBaseProduce = parseInt(cardElem.dataset.produce);
+  tile.buildingLabel = cardElem.dataset.label;
+  
+  // 依據地塊計算基本產出
+  let produceVal = tile.buildingBaseProduce;
+  if(tile.type === 'city') {
+    produceVal += 2; // 城市地塊效果：+2
     if(cardElem.dataset.label === '繁華區'){
-        produceVal += 4;
-    }
-}
-if(tile.type === 'river') produceVal -= 1;
-    // 新增：如果建築的標籤為「貧民窟」且地塊類型也是 slum，則每相鄰一棟已放置建築，產出加 1 金幣（最多 +5）
-if(tile.type === 'slum' && cardElem.dataset.label === '貧民窟'){
-    let adjacentCount = 0;
-    tile.adjacency.forEach(nbId => {
-        const nbTile = tileMap.find(t => t.id === nbId);
-        if(nbTile && nbTile.buildingPlaced){
-            adjacentCount++;
-        }
-    });
-    let bonus = Math.min(adjacentCount, 5);
-    produceVal += bonus;
-}
-    tile.buildingProduce = produceVal;
-    tile.buildingPlaced = true;
-    // 將手牌的卡牌從手排移除，並在地塊上顯示卡名
-    const hex = mapArea.querySelector(`[data-tile-id="${tile.id}"]`);
-    const bName = cardElem.querySelector('.card-name').innerText;
-    hex.textContent = bName;
-    cardElem.remove();
-
-    // 如果是 slum，計算 BFS cluster
-    if(tile.type==='slum'){
-      checkSlumClusterAndAddBonus(tile.id);
-    } else {
-      roundRevenue += tile.buildingProduce;
-      updateResourceDisplay();
+        produceVal += 4; // 若建築標籤為繁華區，再加 +4
     }
   }
+  if(tile.type === 'river') produceVal -= 1;
+  
+  // 不再直接計算貧民窟相鄰加成與 BFS 群聚，此部分移至 recalcRevenueFromScratch()
+  tile.buildingProduce = produceVal;
+  tile.buildingPlaced = true;
+  
+  // 將手牌的卡牌從手排移除，並在地塊上顯示卡名
+  const hex = mapArea.querySelector(`[data-tile-id="${tile.id}"]`);
+  const bName = cardElem.querySelector('.card-name').innerText;
+  hex.textContent = bName;
+  cardElem.remove();
+
+  // 放置完建築後，統一重新計算全地圖產出
+  recalcRevenueFromScratch();
+}
 
   // BFS：對於 slum tile 的連通集，若數量>=3，則每塊 +1 (只加一次)
   function checkSlumClusterAndAddBonus(startId){
