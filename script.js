@@ -373,54 +373,6 @@ newCard.addEventListener('dragend', e => {
   // 放置完建築後，統一重新計算全地圖產出
   recalcRevenueFromScratch();
 }
-  }
-  if(tile.type === 'river') produceVal -= 1;
-  
-  // 不再直接計算貧民窟相鄰加成與 BFS 群聚，此部分移至 recalcRevenueFromScratch()
-  tile.buildingProduce = produceVal;
-  tile.buildingPlaced = true;
-  
-  // 將手牌的卡牌從手排移除，並在地塊上顯示卡名
-  const hex = mapArea.querySelector(`[data-tile-id="${tile.id}"]`);
-  const bName = cardElem.querySelector('.card-name').innerText;
-  hex.textContent = bName;
-  cardElem.remove();
-
-  // 放置完建築後，統一重新計算全地圖產出
-  recalcRevenueFromScratch();
-}
-
-  // BFS：對於 slum tile 的連通集，若數量>=3，則每塊 +1 (只加一次)
-  function checkSlumClusterAndAddBonus(startId){
-    const visited = new Set();
-    const queue = [startId];
-    const cluster = [];
-    while(queue.length > 0){
-      const currId = queue.shift();
-      if(visited.has(currId)) continue;
-      visited.add(currId);
-      const currTile = tileMap.find(x=>x.id===currId);
-      if(currTile && currTile.type==='slum' && currTile.buildingPlaced){
-        cluster.push(currTile);
-        currTile.adjacency.forEach(nbId=>{
-          const nbTile = tileMap.find(x=>x.id===nbId);
-          if(nbTile && nbTile.type==='slum' && nbTile.buildingPlaced && !visited.has(nbId)){
-            queue.push(nbId);
-          }
-        });
-      }
-    }
-    console.log("cluster found =>", cluster.map(x=>x.id));
-    if(cluster.length >= 3){
-      cluster.forEach(ct=>{
-        if(!ct.slumBonusGranted){
-          ct.buildingProduce += 1;
-          ct.slumBonusGranted = true;
-        }
-      });
-    }
-    recalcRevenueFromScratch();
-  }
 
   function recalcRevenueFromScratch(){
   let total = 0;
