@@ -373,6 +373,22 @@ newCard.addEventListener('dragend', e => {
   // 放置完建築後，統一重新計算全地圖產出
   recalcRevenueFromScratch();
 }
+  }
+  if(tile.type === 'river') produceVal -= 1;
+  
+  // 不再直接計算貧民窟相鄰加成與 BFS 群聚，此部分移至 recalcRevenueFromScratch()
+  tile.buildingProduce = produceVal;
+  tile.buildingPlaced = true;
+  
+  // 將手牌的卡牌從手排移除，並在地塊上顯示卡名
+  const hex = mapArea.querySelector(`[data-tile-id="${tile.id}"]`);
+  const bName = cardElem.querySelector('.card-name').innerText;
+  hex.textContent = bName;
+  cardElem.remove();
+
+  // 放置完建築後，統一重新計算全地圖產出
+  recalcRevenueFromScratch();
+}
 
   // BFS：對於 slum tile 的連通集，若數量>=3，則每塊 +1 (只加一次)
   function checkSlumClusterAndAddBonus(startId){
@@ -409,44 +425,86 @@ newCard.addEventListener('dragend', e => {
   function recalcRevenueFromScratch(){
   let total = 0;
   
-  // 重新計算各地塊的產出（不含貧民窟相鄰加成）
+  // (0) 重置所有 tile 的群聚加成標記
+  tileMap.forEach(t => {
+    t.slumBonusGranted = false;
+  });
+  
+  // (1) 根據每塊 tile 的基礎產出與地塊屬性重新計算初步產出
   tileMap.forEach(t => {
     if(!t.buildingPlaced) return;
     
-    // 取出前面在 placeBuildingOnTile 中記錄的實際基礎產出與標籤
+    // 使用 placeBuildingOnTile() 中記錄的基礎產出與標籤
     let baseP = t.buildingBaseProduce;  
     let label = t.buildingLabel;
     
     let produceVal = baseP;
+    
     if(t.type === 'city'){
-      produceVal += 2;
+      produceVal += 2; // 城市地塊效果：+2
       if(label === '繁華區'){
-        produceVal += 4;
+        produceVal += 4; // 繁華區標籤加成：+4
       }
     } else if(t.type === 'river'){
-      produceVal -= 1;
+      produceVal -= 1; // 河流地塊效果：-1
     }
+    
     // 將初步計算結果記回
     t.buildingProduce = produceVal;
   });
   
-  // 統一計算「貧民窟」標籤的相鄰建築加成
+  // (2) 對所有 slum tile 執行 BFS，統一處理群聚加成：
+  // 若連通集（cluster）的 slum tile 數量 ≥ 3，則該 cluster 中每塊 tile額外 +1
+  let visited = new Set();
+  tileMap.forEach(t => {
+    if(!t.buildingPlaced || t.type !== 'slum') return;
+    if(visited.has(t.id)) return;
+    
+    let queue = [t.id];
+    let cluster = [];
+    while(queue.length > 0){
+      let currId = queue.shift();
+      if(visited.has(currId)) continue;
+      visited.add(currId);
+      
+      let currTile = tileMap.find(x => x.id === currId);
+      if(!currTile || !currTile.buildingPlaced || currTile.type !== 'slum') continue;
+      cluster.push(currTile);
+      
+      // 將所有鄰近 tile 加入隊列
+      currTile.adjacency.forEach(nbId => {
+        if(!visited.has(nbId)){
+          queue.push(nbId);
+        }
+      });
+    }
+    
+    // 若該 cluster 中有 ≥ 3 個 tile，則每塊額外 +1
+    if(cluster.length >= 3){
+      cluster.forEach(ct => {
+        ct.buildingProduce += 1;
+        ct.slumBonusGranted = true;
+      });
+    }
+  });
+  
+  // (3) 對每塊 slum tile，若建築標籤為「貧民窟」，計算相鄰已放置建築的數量，每相鄰 +1 (最多 +5)
   tileMap.forEach(t => {
     if(!t.buildingPlaced) return;
     if(t.type === 'slum' && t.buildingLabel === '貧民窟'){
       let adjacentCount = 0;
       t.adjacency.forEach(nbId => {
-         const nbTile = tileMap.find(x => x.id === nbId);
-         if(nbTile && nbTile.buildingPlaced){
-            adjacentCount++;
-         }
+        const nbTile = tileMap.find(x => x.id === nbId);
+        if(nbTile && nbTile.buildingPlaced){
+          adjacentCount++;
+        }
       });
       let bonus = Math.min(adjacentCount, 5);
       t.buildingProduce += bonus;
     }
   });
   
-  // 加總所有地塊產出
+  // (4) 累加所有地塊最終產出
   tileMap.forEach(t => {
     if(t.buildingPlaced){
       total += t.buildingProduce;
