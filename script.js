@@ -169,7 +169,7 @@ window.onload = function(){
     "繁華區":"若此建築物蓋在繁華區，則回合結束時產出+4金幣",
     "貧民窟":"若此建築物蓋在貧民窟，相鄰帶貧民窟建築每座+1金幣",
     "河流":"若此建築物蓋在河流上，則回合結束時+3金幣，且周圍隨機一座建築產出翻倍",
-    "荒原":"若此建築物蓋在荒原上，50%不產出，50%地塊轉為貧民窟"
+    "荒原":"若此建築物未蓋在荒原地塊上，則回合結束時有50%機率不產出金幣"
   };
 
   function createBuildingCard(info){
@@ -466,17 +466,34 @@ newCard.addEventListener('dragend', e => {
   roundRevenue = total;
   updateResourceDisplay();
 }
-
+function computeEffectiveRevenue(){
+  let effectiveTotal = 0;
+  tileMap.forEach(t => {
+    if(t.buildingPlaced){
+      // 如果建築標籤是 "荒原" 且所在地塊不是荒原 (wasteland)
+      if(t.buildingLabel === '荒原' && t.type !== 'wasteland'){
+        // 50% 機率產出為 0
+        let effective = (Math.random() < 0.5) ? 0 : t.buildingProduce;
+        effectiveTotal += effective;
+      } else {
+        effectiveTotal += t.buildingProduce;
+      }
+    }
+  });
+  return effectiveTotal;
+}
   /***********************
    * 回合結束
    ***********************/
   endTurnBtn.addEventListener('click', ()=>{
-    currentGold += roundRevenue;
-    currentRound++;
-    updateRoundDisplay();
-    updateResourceDisplay();
-    window.startDrawPhase();
-  });
+  // 使用 computeEffectiveRevenue() 計算實際回合產出 (含荒原隨機 50% 失效效果)
+  let effectiveRevenue = computeEffectiveRevenue();
+  currentGold += effectiveRevenue;
+  currentRound++;
+  updateRoundDisplay();
+  updateResourceDisplay();
+  window.startDrawPhase();
+});
 
   /***********************
    * 開始遊戲 (Enter 或 按鈕)
