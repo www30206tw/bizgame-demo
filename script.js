@@ -163,6 +163,8 @@ window.onload = function(){
     { name:'建築F', rarity:'史詩',  label:'河流',   baseProduce:6 },
     { name:'建築G', rarity:'傳說',  label:'繁華區', baseProduce:6 },
     { name:'建築H', rarity:'傳說',  label:'河流',   baseProduce:6 },
+    { name: '淨水站', rarity: '普通', label: '河流', baseProduce: 4, specialAbility: '回合結束時，50%機率額外產出+1金幣' },
+    { name: '星軌會館', rarity: '稀有', label: '繁華區', baseProduce: 6, specialAbility: '若無相鄰建築，則每回合額外+2金幣' }
   ];
 
   const labelEffectDesc = {
@@ -186,7 +188,10 @@ window.onload = function(){
       <div class="card-name">${info.name}</div>
       <div class="card-rarity">${info.rarity}</div>
       <div class="card-label">${info.label}</div>
-      <div class="tooltip">${info.label}：${labelEffectDesc[info.label] || ""}</div>
+      <div class="tooltip">
+  ${info.label}：${labelEffectDesc[info.label] || ""}
+  ${info.specialAbility ? " / " + info.specialAbility : ""}
+</div>
     `;
     // 拖曳時手排卡隱藏
      let dragClone = null;
@@ -349,6 +354,7 @@ newCard.addEventListener('dragend', e => {
   // 記錄該建築的基礎產出與標籤（使用卡牌內的數值，不固定預設為6）
   tile.buildingBaseProduce = parseInt(cardElem.dataset.produce);
   tile.buildingLabel = cardElem.dataset.label;
+  tile.buildingName = cardElem.querySelector('.card-name').innerText;
   
   // 依據地塊計算基本產出
   let produceVal = tile.buildingBaseProduce;
@@ -455,6 +461,27 @@ newCard.addEventListener('dragend', e => {
       });
       let bonus = Math.min(adjacentCount, 5);
       t.buildingProduce += bonus;
+    }
+  });
+  // (3.5) 處理建築物專屬特殊能力：淨水站 & 星軌會館
+  tileMap.forEach(t => {
+    if(!t.buildingPlaced) return;
+    if(t.buildingName === '淨水站'){
+      if(Math.random() < 0.5){
+        t.buildingProduce += 1;
+      }
+    }
+    if(t.buildingName === '星軌會館'){
+      let hasNeighbor = false;
+      t.adjacency.forEach(nbId => {
+        const nbTile = tileMap.find(x => x.id === nbId);
+        if(nbTile && nbTile.buildingPlaced){
+          hasNeighbor = true;
+        }
+      });
+      if(!hasNeighbor){
+        t.buildingProduce += 2;
+      }
     }
   });
   
