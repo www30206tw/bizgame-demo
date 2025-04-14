@@ -168,7 +168,7 @@ window.onload = function(){
   const labelEffectDesc = {
     "繁華區":"若此建築物蓋在繁華區，則回合結束時產出+4金幣",
     "貧民窟":"若此建築物蓋在貧民窟，相鄰帶貧民窟建築每座+1金幣",
-    "河流":"若此建築物蓋在河流上，則回合結束時+3金幣，且周圍隨機一座建築產出翻倍",
+    "河流":"若此建築物蓋在河流上，則回合結束時產出+3金幣",
     "荒原":"若此建築物未蓋在荒原地塊上，則回合結束時有50%機率不產出金幣"
   };
 
@@ -398,9 +398,11 @@ newCard.addEventListener('dragend', e => {
         produceVal += 4; // 繁華區標籤加成：+4
       }
     } else if(t.type === 'river'){
-      produceVal -= 1; // 河流地塊效果：-1
-    }
-    
+  produceVal -= 1; // 河流地塊效果：-1
+  if(label === '河流'){
+    produceVal += 3; // 河流建築標籤額外效果：+3
+  }
+}
     // 將初步計算結果記回
     t.buildingProduce = produceVal;
   });
