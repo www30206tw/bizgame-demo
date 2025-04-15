@@ -69,67 +69,65 @@ body {
 
 /* 卡片樣式 */
 .card {
+  width: 140px;        /* 增加卡牌寬度 */
+  height: 260px;       /* 增加卡牌高度 */
   border: 1px solid #333;
   background: #eee;
-  cursor: pointer;
-  width: 120px;
-  height: 220px; /* 增高以容納標籤及 tooltip */
   position: relative;
+  cursor: pointer;
+  padding: 5px;
+  box-sizing: border-box;
 }
-.card.selected {
-  outline: 3px solid yellow;
-}
-.card-gold-output {
-  position: absolute;
-  top: 5px;
-  left: 5px;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background-color: gold;
-  text-align: center;
-  line-height: 24px;
-  font-weight: bold;
-  color: black;
-}
-.card-image-area {
+
+/* 調整內部文字排版，讓 card-name、card-rarity、card-label 與 card-ability 不重疊 */
+.card .card-image-area {
   position: absolute;
   top: 30px;
   left: 10px;
-  width: 100px;
+  width: 120px;
   height: 60px;
   background-color: #ccc;
 }
-.card-name {
+.card .card-name {
   position: absolute;
   top: 95px;
+  left: 0;
   width: 100%;
   text-align: center;
   font-weight: bold;
 }
-.card-rarity {
+.card .card-rarity {
   position: absolute;
   top: 120px;
+  left: 0;
   width: 100%;
   text-align: center;
   font-size: 14px;
   color: #444;
 }
-/* 標籤顯示 */
-.card-label {
+.card .card-label {
   position: absolute;
   top: 145px;
+  left: 0;
   width: 100%;
   text-align: center;
   font-weight: bold;
   font-size: 14px;
   color: #222;
 }
-/* tooltip (hover 顯示) */
-.tooltip {
+.card .card-ability {
+  position: absolute;
+  top: 170px;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 13px;
+  color: #006600;
+}
+.card .tooltip {
   position: absolute;
   top: 10px;
-  left: 130px;
+  left: 150px;
   width: 180px;
   background: #fff;
   color: #333;
