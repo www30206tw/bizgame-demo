@@ -377,10 +377,9 @@ newCard.addEventListener('dragend', e => {
  if(realCardInHand) {
    realCardInHand.remove();
  }  
-  // 將手牌的卡牌從手排移除，並在地塊上顯示卡名
-  const hex = mapArea.querySelector(`[data-tile-id="${tile.id}"]`);
+  // 更新地塊顯示（包含能力）
+  const bName = cardElem.querySelector('.card-name').innerText;
   const bAbility = cardElem.querySelector('.card-ability')?.innerText || "";
-const bName = cardElem.querySelector('.card-name').innerText;
 // hex.textContent = bName;
 hex.innerHTML = `<div class="hex-name">${bName}</div>
                  <div class="hex-ability">${bAbility}</div>`;
