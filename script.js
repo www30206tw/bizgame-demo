@@ -288,6 +288,7 @@ card.addEventListener('dragend', e => {
         <div class="card-name">${cName}</div>
         <div class="card-rarity">${cRarity}</div>
         <div class="card-label">${cLabel}</div>
+        <div class="card-ability">${cAbility}</div>
         <div class="tooltip">${cLabel}：${labelEffectDesc[cLabel] || ""}</div>
       `;
       newCard.draggable = true;
@@ -373,9 +374,15 @@ newCard.addEventListener('dragend', e => {
   
   // 將手牌的卡牌從手排移除，並在地塊上顯示卡名
   const hex = mapArea.querySelector(`[data-tile-id="${tile.id}"]`);
-  const bName = cardElem.querySelector('.card-name').innerText;
   const bAbility = cardElem.querySelector('.card-ability')?.innerText || "";
-  hex.innerHTML = `<div class="hex-name">${bName}</div><div class="hex-ability">${bAbility}</div>`;
+const bName = cardElem.querySelector('.card-name').innerText;
+// hex.textContent = bName;
+hex.innerHTML = `<div class="hex-name">${bName}</div>
+                 <div class="hex-ability">${bAbility}</div>`;
+  const realCardInHand = hand.querySelector(`[data-card-id="${cardElem.dataset.cardId}"]`);
+ if(realCardInHand) {
+   realCardInHand.remove();
+ }
 
   // 放置完建築後，統一重新計算全地圖產出
   recalcRevenueFromScratch();
