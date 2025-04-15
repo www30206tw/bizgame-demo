@@ -467,11 +467,6 @@ newCard.addEventListener('dragend', e => {
   // (3.5) 處理建築物專屬特殊能力：淨水站 & 星軌會館
   tileMap.forEach(t => {
     if(!t.buildingPlaced) return;
-    if(t.buildingName === '淨水站'){
-      if(Math.random() < 0.5){
-        t.buildingProduce += 1;
-      }
-    }
     if(t.buildingName === '星軌會館'){
       let hasNeighbor = false;
       t.adjacency.forEach(nbId => {
@@ -500,14 +495,18 @@ function computeEffectiveRevenue(){
   let effectiveTotal = 0;
   tileMap.forEach(t => {
     if(t.buildingPlaced){
-      // 如果建築標籤是 "荒原" 且所在地塊不是荒原 (wasteland)
+      let eff = t.buildingProduce; // 這是 recalcRevenueFromScratch() 計算後的數值
+      // 處理荒原能力：若建築標籤為 "荒原" 且所在地塊不是 wasteland，則50%機率產出為 0
       if(t.buildingLabel === '荒原' && t.type !== 'wasteland'){
-        // 50% 機率產出為 0
-        let effective = (Math.random() < 0.5) ? 0 : t.buildingProduce;
-        effectiveTotal += effective;
-      } else {
-        effectiveTotal += t.buildingProduce;
+        eff = (Math.random() < 0.5) ? 0 : eff;
       }
+      // 處理淨水站能力：若建築名稱是 "淨水站"，則50%機率額外 +1金幣
+      if(t.buildingName === '淨水站'){
+         if(Math.random() < 0.5){
+            eff += 1;
+         }
+      }
+      effectiveTotal += eff;
     }
   });
   return effectiveTotal;
