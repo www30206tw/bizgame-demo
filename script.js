@@ -373,6 +373,7 @@ newCard.addEventListener('dragend', e => {
   
   // 將手牌的卡牌從手排移除，並在地塊上顯示卡名
   const hex = mapArea.querySelector(`[data-tile-id="${tile.id}"]`);
+  const bAbility = cardElem.querySelector('.card-ability')?.innerText || "";
   const bName = cardElem.querySelector('.card-name').innerText;
   hex.textContent = bName;
   cardElem.remove();
