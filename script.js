@@ -188,6 +188,7 @@ window.onload = function(){
       <div class="card-name">${info.name}</div>
       <div class="card-rarity">${info.rarity}</div>
       <div class="card-label">${info.label}</div>
+      <div class="card-ability">${info.specialAbility ? info.specialAbility : ""}</div>
       <div class="tooltip">
   ${info.label}：${labelEffectDesc[info.label] || ""}
   ${info.specialAbility ? " / " + info.specialAbility : ""}
