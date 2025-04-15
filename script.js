@@ -371,7 +371,12 @@ newCard.addEventListener('dragend', e => {
   // 不再直接計算貧民窟相鄰加成與 BFS 群聚，此部分移至 recalcRevenueFromScratch()
   tile.buildingProduce = produceVal;
   tile.buildingPlaced = true;
-  
+    
+ // 找到真正位於手排中的卡（以防 cardElem 為 clone）
+  const realCardInHand = hand.querySelector(`[data-card-id="${cardElem.dataset.cardId}"]`);
+ if(realCardInHand) {
+   realCardInHand.remove();
+ }  
   // 將手牌的卡牌從手排移除，並在地塊上顯示卡名
   const hex = mapArea.querySelector(`[data-tile-id="${tile.id}"]`);
   const bAbility = cardElem.querySelector('.card-ability')?.innerText || "";
@@ -379,10 +384,7 @@ const bName = cardElem.querySelector('.card-name').innerText;
 // hex.textContent = bName;
 hex.innerHTML = `<div class="hex-name">${bName}</div>
                  <div class="hex-ability">${bAbility}</div>`;
-  const realCardInHand = hand.querySelector(`[data-card-id="${cardElem.dataset.cardId}"]`);
- if(realCardInHand) {
-   realCardInHand.remove();
- }
+  
 
   // 放置完建築後，統一重新計算全地圖產出
   recalcRevenueFromScratch();
