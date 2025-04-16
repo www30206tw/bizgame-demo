@@ -175,14 +175,13 @@ window.onload = function(){
   };
 
   function createBuildingCard(info){
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.dataset.type = 'building';
-    card.dataset.produce = info.baseProduce;
-    card.dataset.cardId = ++cardIdCounter;
-    // 記錄標籤
-    card.dataset.label = info.label;
-    card.innerHTML = `
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.dataset.type = 'building';
+  card.dataset.produce = info.baseProduce;
+  card.dataset.cardId = ++cardIdCounter;
+  card.dataset.label = info.label;
+  card.innerHTML = `
       <div class="card-gold-output">${info.baseProduce}</div>
       <div class="card-image-area"></div>
       <div class="card-name">${info.name}</div>
@@ -190,32 +189,52 @@ window.onload = function(){
       <div class="card-label">${info.label}</div>
       <div class="card-ability">${info.specialAbility ? info.specialAbility : ""}</div>
       <div class="tooltip">
-  ${info.label}：${labelEffectDesc[info.label] || ""}
-  ${info.specialAbility ? " / " + info.specialAbility : ""}
-</div>
-    `;
-    // 拖曳時手排卡隱藏
-     let dragClone = null;
-card.addEventListener('dragstart', e => {
-  e.dataTransfer.setData('cardId', card.dataset.cardId);
-  e.dataTransfer.setData('text/plain', info.name);
-  dragClone = card.cloneNode(true);
-  dragClone.style.position = 'absolute';
-  dragClone.style.left = '-9999px';
-  dragClone.style.top = '-9999px';
-  document.body.appendChild(dragClone);
-  e.dataTransfer.setDragImage(dragClone, 0, 0);
-  setTimeout(() => { card.style.display = 'none'; }, 0);
-});
-card.addEventListener('dragend', e => {
-  card.style.display = '';
-  if (dragClone) {
-    document.body.removeChild(dragClone);
-    dragClone = null;
-  }
-});
-    return card;
-  }
+          ${info.label}：${labelEffectDesc[info.label] || ""}
+          ${info.specialAbility ? " / " + info.specialAbility : ""}
+      </div>
+  `;
+  // 拖曳時手排卡隱藏與拖曳事件
+  let dragClone = null;
+  
+  // 點選事件
+  card.addEventListener('click', (e) => {
+      // 如果正在拖曳，不處理 click（避免誤觸）
+      if(card.getAttribute('data-dragging') === 'true'){
+         return;
+      }
+      if(selectedCards.includes(card)){
+          card.classList.remove('selected');
+          selectedCards.splice(selectedCards.indexOf(card), 1);
+      } else if(selectedCards.length < 2){
+          card.classList.add('selected');
+          selectedCards.push(card);
+      }
+  });
+  
+  card.addEventListener('dragstart', e => {
+      card.setAttribute('data-dragging', 'true');
+      e.dataTransfer.setData('cardId', card.dataset.cardId);
+      e.dataTransfer.setData('text/plain', info.name);
+      dragClone = card.cloneNode(true);
+      dragClone.style.position = 'absolute';
+      dragClone.style.left = '-9999px';
+      dragClone.style.top = '-9999px';
+      document.body.appendChild(dragClone);
+      e.dataTransfer.setDragImage(dragClone, 0, 0);
+      setTimeout(() => { card.style.display = 'none'; }, 0);
+  });
+  
+  card.addEventListener('dragend', e => {
+      card.style.display = '';
+      card.removeAttribute('data-dragging');
+      if (dragClone) {
+          document.body.removeChild(dragClone);
+          dragClone = null;
+      }
+  });
+  
+  return card;
+}
 
   function shuffle(arr){
     for(let i = arr.length - 1; i > 0; i--){
@@ -226,26 +245,14 @@ card.addEventListener('dragend', e => {
   }
 
   function drawCards(){
-    cardPool.innerHTML = '';
-    // 從 8 張牌中隨機取 5 張
-    const arr = shuffle(cardPoolData.slice());
-    const five = arr.slice(0,5);
-    five.forEach(info=>{
+  cardPool.innerHTML = '';
+  const arr = shuffle(cardPoolData.slice());
+  const five = arr.slice(0,5);
+  five.forEach(info=>{
       const card = createBuildingCard(info);
-      card.addEventListener('click', (e) => {
-  // 為避免拖曳時觸發 click，這裡可以檢查事件是否為輕微移動
-  // 若不需要此判斷，可直接用下列邏輯：
-  if(selectedCards.includes(card)){
-    card.classList.remove('selected');
-    selectedCards.splice(selectedCards.indexOf(card),1);
-  } else if(selectedCards.length < 2){
-    card.classList.add('selected');
-    selectedCards.push(card);
-  }
-});
       cardPool.appendChild(card);
-    });
-  }
+  });
+}
 
   window.refreshCards = function(){
     const cost = 2 * (refreshCount + 1);
