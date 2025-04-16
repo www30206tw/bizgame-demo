@@ -409,12 +409,12 @@ window.onload = function(){
   tile.buildingProduce = produceVal;
   tile.buildingPlaced = true;
     
- // 找到真正位於手排中的卡（以防 cardElem 為 clone）
+  // 找到真正位於手排中的卡（以防 cardElem 為 clone）
   const realCardInHand = hand.querySelector(`[data-card-id="${cardElem.dataset.cardId}"]`);
- if(realCardInHand) {
-   realCardInHand.remove();
- }  
- //  正確取得該地塊的 DOM
+  if(realCardInHand) {
+    realCardInHand.remove();
+  }  
+  // 正確取得該地塊的 DOM（請確保這行下面不要有非註解的文字）
   const hex = mapArea.querySelector(`[data-tile-id="${tile.id}"]`);
   if(!hex){
     console.error("找不到對應 tile 的 DOM，tile.id =", tile.id);
@@ -424,14 +424,13 @@ window.onload = function(){
   // 更新地塊顯示（包含能力）
   const bName = cardElem.querySelector('.card-name').innerText;
   const bAbility = cardElem.querySelector('.card-ability')?.innerText || "";
-// hex.textContent = bName;
-hex.innerHTML = `<div class="hex-name">${bName}</div>
-                 <div class="hex-ability">${bAbility}</div>`;
+  hex.innerHTML = `<div class="hex-name">${bName}</div>
+                   <div class="hex-ability">${bAbility}</div>`;
   
-
   // 放置完建築後，統一重新計算全地圖產出
   recalcRevenueFromScratch();
 }
+
 
   function recalcRevenueFromScratch(){
   let total = 0;
