@@ -285,8 +285,9 @@ window.onload = function(){
     const cName = c.querySelector('.card-name').innerText;
     const cRarity = c.querySelector('.card-rarity').innerText;
     const cLabel = c.querySelector('.card-label').innerText;
-    // 【新增】取得卡牌能力文字，如果沒有則為空字串
+    // 【新增】取得卡牌能力文字，如果不存在則空字串
     const cAbility = c.querySelector('.card-ability') ? c.querySelector('.card-ability').innerText : "";
+    
     const newCard = document.createElement('div');
     newCard.className = 'card';
     newCard.dataset.type = 'building';
@@ -319,6 +320,31 @@ window.onload = function(){
       if (tooltipElem) {
         tooltipElem.style.display = 'none';
       }
+  
+      document.body.appendChild(dragClone);
+  
+      // 計算使用者點擊位置相對於卡牌左上角的偏移
+      const rect = newCard.getBoundingClientRect();
+      const offsetX = e.clientX - rect.left;
+      const offsetY = e.clientY - rect.top;
+      
+      // 傳入正確的偏移量
+      e.dataTransfer.setDragImage(dragClone, offsetX, offsetY);
+  
+      setTimeout(() => { newCard.style.display = 'none'; }, 0);
+    });
+  
+    newCard.addEventListener('dragend', e => {
+      newCard.style.display = '';
+      if (dragClone) {
+        document.body.removeChild(dragClone);
+        dragClone = null;
+      }
+    });
+    hand.appendChild(newCard);
+  });
+  drawSection.style.display = 'none';
+};
   
       document.body.appendChild(dragClone);
   
@@ -388,7 +414,7 @@ window.onload = function(){
  if(realCardInHand) {
    realCardInHand.remove();
  }  
-    正確取得該地塊的 DOM
+ //  正確取得該地塊的 DOM
   const hex = mapArea.querySelector(`[data-tile-id="${tile.id}"]`);
   if(!hex){
     console.error("找不到對應 tile 的 DOM，tile.id =", tile.id);
