@@ -275,73 +275,75 @@ window.onload = function(){
   };
 
   window.confirmDraw = function(){
-    if(selectedCards.length < 2){
-      alert("請至少選擇 2 張卡牌!");
-      return;
-    }
-    // 依選擇複製卡牌進入手排
-    selectedCards.forEach(c => {
-      const baseP = parseInt(c.dataset.produce) || 6;
-      const cName = c.querySelector('.card-name').innerText;
-      const cRarity = c.querySelector('.card-rarity').innerText;
-      const cLabel = c.querySelector('.card-label').innerText;
-      const newCard = document.createElement('div');
-      newCard.className = 'card';
-      newCard.dataset.type = 'building';
-      newCard.dataset.produce = baseP;
-      newCard.dataset.cardId = ++cardIdCounter;
-      newCard.dataset.label = cLabel;
-      newCard.innerHTML = `
-        <div class="card-gold-output">${baseP}</div>
-        <div class="card-image-area"></div>
-        <div class="card-name">${cName}</div>
-        <div class="card-rarity">${cRarity}</div>
-        <div class="card-label">${cLabel}</div>
-        <div class="card-ability">${cAbility}</div>
-        <div class="tooltip">${cLabel}：${labelEffectDesc[cLabel] || ""}</div>
-      `;
-      newCard.draggable = true;
-      let dragClone = null;
-newCard.addEventListener('dragstart', e => {
-  e.dataTransfer.setData('cardId', newCard.dataset.cardId);
-  e.dataTransfer.setData('text/plain', cName);
-
-  // 建立拖曳預覽的克隆物件
-  dragClone = newCard.cloneNode(true);
-  dragClone.style.position = 'absolute';
-  dragClone.style.left = '-9999px';
-  dragClone.style.top = '-9999px';
-
-  // 隱藏克隆中的 tooltip（保留 DOM 結構但不顯示）
-  const tooltipElem = dragClone.querySelector('.tooltip');
-  if (tooltipElem) {
-    tooltipElem.style.display = 'none';
+  if(selectedCards.length < 2){
+    alert("請至少選擇 2 張卡牌!");
+    return;
   }
-
-  document.body.appendChild(dragClone);
-
-  // 計算使用者點擊位置相對於卡牌左上角的偏移
-  const rect = newCard.getBoundingClientRect();
-  const offsetX = e.clientX - rect.left;
-  const offsetY = e.clientY - rect.top;
+  // 依選擇複製卡牌進入手排
+  selectedCards.forEach(c => {
+    const baseP = parseInt(c.dataset.produce) || 6;
+    const cName = c.querySelector('.card-name').innerText;
+    const cRarity = c.querySelector('.card-rarity').innerText;
+    const cLabel = c.querySelector('.card-label').innerText;
+    // 【新增】取得卡牌能力文字，如果沒有則為空字串
+    const cAbility = c.querySelector('.card-ability') ? c.querySelector('.card-ability').innerText : "";
+    const newCard = document.createElement('div');
+    newCard.className = 'card';
+    newCard.dataset.type = 'building';
+    newCard.dataset.produce = baseP;
+    newCard.dataset.cardId = ++cardIdCounter;
+    newCard.dataset.label = cLabel;
+    newCard.innerHTML = `
+      <div class="card-gold-output">${baseP}</div>
+      <div class="card-image-area"></div>
+      <div class="card-name">${cName}</div>
+      <div class="card-rarity">${cRarity}</div>
+      <div class="card-label">${cLabel}</div>
+      <div class="card-ability">${cAbility}</div>
+      <div class="tooltip">${cLabel}：${labelEffectDesc[cLabel] || ""}</div>
+    `;
+    newCard.draggable = true;
+    let dragClone = null;
+    newCard.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('cardId', newCard.dataset.cardId);
+      e.dataTransfer.setData('text/plain', cName);
   
-  // 傳入正確的偏移量
-  e.dataTransfer.setDragImage(dragClone, offsetX, offsetY);
-
-  setTimeout(() => { newCard.style.display = 'none'; }, 0);
-});
-
-newCard.addEventListener('dragend', e => {
-  newCard.style.display = '';
-  if (dragClone) {
-    document.body.removeChild(dragClone);
-    dragClone = null;
-  }
-});
-      hand.appendChild(newCard);
+      // 建立拖曳預覽的克隆物件
+      dragClone = newCard.cloneNode(true);
+      dragClone.style.position = 'absolute';
+      dragClone.style.left = '-9999px';
+      dragClone.style.top = '-9999px';
+  
+      // 隱藏克隆中的 tooltip（保留 DOM 結構但不顯示）
+      const tooltipElem = dragClone.querySelector('.tooltip');
+      if (tooltipElem) {
+        tooltipElem.style.display = 'none';
+      }
+  
+      document.body.appendChild(dragClone);
+  
+      // 計算使用者點擊位置相對於卡牌左上角的偏移
+      const rect = newCard.getBoundingClientRect();
+      const offsetX = e.clientX - rect.left;
+      const offsetY = e.clientY - rect.top;
+      
+      // 傳入正確的偏移量
+      e.dataTransfer.setDragImage(dragClone, offsetX, offsetY);
+  
+      setTimeout(() => { newCard.style.display = 'none'; }, 0);
     });
-    drawSection.style.display = 'none';
-  };
+  
+    newCard.addEventListener('dragend', e => {
+      newCard.style.display = '';
+      if (dragClone) {
+        document.body.removeChild(dragClone);
+        dragClone = null;
+      }
+    });
+    hand.appendChild(newCard);
+  });
+  drawSection.style.display = 'none';
+};
 
   window.startDrawPhase = function(){
     refreshCount = 0;
