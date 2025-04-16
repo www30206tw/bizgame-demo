@@ -279,15 +279,13 @@ window.onload = function(){
     alert("請至少選擇 2 張卡牌!");
     return;
   }
-  // 依選擇複製卡牌進入手排
   selectedCards.forEach(c => {
     const baseP = parseInt(c.dataset.produce) || 6;
     const cName = c.querySelector('.card-name').innerText;
     const cRarity = c.querySelector('.card-rarity').innerText;
     const cLabel = c.querySelector('.card-label').innerText;
-    // 【新增】取得卡牌能力文字，如果不存在則空字串
-    const cAbility = c.querySelector('.card-ability') ? c.querySelector('.card-ability').innerText : "";
-    
+    const cAbility = c.querySelector('.card-ability')?.innerText || "";
+
     const newCard = document.createElement('div');
     newCard.className = 'card';
     newCard.dataset.type = 'building';
@@ -305,21 +303,18 @@ window.onload = function(){
     `;
     newCard.draggable = true;
     let dragClone = null;
+
     newCard.addEventListener('dragstart', e => {
-      e.dataTransfer.setData('cardId', newCard.dataset.cardId);
-      e.dataTransfer.setData('text/plain', cName);
-  
-      // 建立拖曳預覽的克隆物件
-      dragClone = newCard.cloneNode(true);
-      dragClone.style.position = 'absolute';
-      dragClone.style.left = '-9999px';
-      dragClone.style.top = '-9999px';
-  
-      // 隱藏克隆中的 tooltip（保留 DOM 結構但不顯示）
-      const tooltipElem = dragClone.querySelector('.tooltip');
-      if (tooltipElem) {
-        tooltipElem.style.display = 'none';
-      }
+      // ...
+    });
+    newCard.addEventListener('dragend', e => {
+      // ...
+    });
+    hand.appendChild(newCard);
+  });
+  // 完整結束 confirmDraw
+  drawSection.style.display = 'none';
+};
   
       document.body.appendChild(dragClone);
   
