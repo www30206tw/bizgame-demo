@@ -232,15 +232,17 @@ card.addEventListener('dragend', e => {
     const five = arr.slice(0,5);
     five.forEach(info=>{
       const card = createBuildingCard(info);
-      card.onclick = ()=>{
-        if(selectedCards.includes(card)){
-          card.classList.remove('selected');
-          selectedCards.splice(selectedCards.indexOf(card),1);
-        } else if(selectedCards.length < 2){
-          card.classList.add('selected');
-          selectedCards.push(card);
-        }
-      };
+      card.addEventListener('click', (e) => {
+  // 為避免拖曳時觸發 click，這裡可以檢查事件是否為輕微移動
+  // 若不需要此判斷，可直接用下列邏輯：
+  if(selectedCards.includes(card)){
+    card.classList.remove('selected');
+    selectedCards.splice(selectedCards.indexOf(card),1);
+  } else if(selectedCards.length < 2){
+    card.classList.add('selected');
+    selectedCards.push(card);
+  }
+});
       cardPool.appendChild(card);
     });
   }
