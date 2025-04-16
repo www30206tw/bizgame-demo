@@ -198,18 +198,18 @@ window.onload = function(){
   
   // 點選事件
   card.addEventListener('click', (e) => {
-      // 如果正在拖曳，不處理 click（避免誤觸）
-      if(card.getAttribute('data-dragging') === 'true'){
-         return;
-      }
-      if(selectedCards.includes(card)){
-          card.classList.remove('selected');
-          selectedCards.splice(selectedCards.indexOf(card), 1);
-      } else if(selectedCards.length < 2){
-          card.classList.add('selected');
-          selectedCards.push(card);
-      }
-  });
+  // 如果正在拖曳，不處理 click
+  if(card.getAttribute('data-dragging') === 'true'){
+     return;
+  }
+  if(selectedCards.includes(card)){
+      card.classList.remove('selected');
+      selectedCards.splice(selectedCards.indexOf(card), 1);
+  } else if(selectedCards.length < 2){
+      card.classList.add('selected');
+      selectedCards.push(card);
+  }
+});
   
   card.addEventListener('dragstart', e => {
       card.setAttribute('data-dragging', 'true');
