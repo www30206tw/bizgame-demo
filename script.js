@@ -388,6 +388,13 @@ window.onload = function(){
  if(realCardInHand) {
    realCardInHand.remove();
  }  
+    正確取得該地塊的 DOM
+  const hex = mapArea.querySelector(`[data-tile-id="${tile.id}"]`);
+  if(!hex){
+    console.error("找不到對應 tile 的 DOM，tile.id =", tile.id);
+    return;
+  }
+    
   // 更新地塊顯示（包含能力）
   const bName = cardElem.querySelector('.card-name').innerText;
   const bAbility = cardElem.querySelector('.card-ability')?.innerText || "";
