@@ -79,6 +79,12 @@ body {
   box-sizing: border-box;
 }
 
+.card.selected {
+  outline: 4px dashed #ff0;     /* 黃色虛線邊框 */
+  box-shadow: 0 0 10px rgba(255,255,0,0.8); /* 黃色光暈 */
+  transition: outline 0.2s, box-shadow 0.2s;
+}
+
 /* 調整內部文字排版，讓 card-name、card-rarity、card-label 與 card-ability 不重疊 */
 .card .card-image-area {
   position: absolute;
