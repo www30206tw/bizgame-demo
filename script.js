@@ -30,7 +30,13 @@ const cardPoolData = [
   { name:'建築G', rarity:'傳說', label:'繁華區',    baseProduce:6 },
   { name:'建築H', rarity:'傳說', label:'河流',      baseProduce:6 },
   { name:'淨水站', rarity:'普通', label:'河流',     baseProduce:4, specialAbility:'50%機率額外+1' },
-  { name:'星軌會館', rarity:'稀有', label:'繁華區',  baseProduce:6, specialAbility:'無鄰居額外+2' }
+  { name:'星軌會館', rarity:'稀有', label:'繁華區',  baseProduce:6, specialAbility:'無鄰居額外+2' },
+  { name:'摩天坊', rarity:'',   label:'繁華區', baseProduce:5 },
+  { name:'集貧居', rarity:'',   label:'貧民窟', baseProduce:4 },
+  { name:'廢土站', rarity:'',   label:'荒原',   baseProduce:3 },
+  { name:'廢材棚', rarity:'',   label:'荒原',   baseProduce:4 },
+  { name:'社群站', rarity:'',   label:'貧民窟', baseProduce:4, specialAbility:'有鄰居額外+1' },
+  { name:'彈出商亭', rarity:'', label:'繁華區', baseProduce:5, specialAbility:'邊緣格額外+1' }
 ];
 
 const labelEffectDesc = {
@@ -329,12 +335,29 @@ function recalcRevenueFromScratch(){
     if(!t.buildingPlaced) return;
     if(t.buildingName==='淨水站'&&Math.random()<0.5) t.buildingProduce++;
     if(t.buildingName==='星軌會館'){
-      const hasN = t.adjacency.some(id=>{
+       const hasN = t.adjacency.some(id=>{
         const nt=tileMap.find(x=>x.id===id);
         return nt&&nt.buildingPlaced;
       });
       if(!hasN) t.buildingProduce+=2;
     }
+    // 社群站：若與至少 1 座其他建築相鄰，額外 +1
+   if(t.buildingName==='社群站'){
+       const hasNeighbor = t.adjacency.some(id=>{
+       const nt=tileMap.find(x=>x.id===id);
+       return nt&&nt.buildingPlaced;
+     });
+     if(hasNeighbor) t.buildingProduce++;
+   }
+   // 彈出商亭：若處於地圖邊緣格，額外 +1
+   if(t.buildingName==='彈出商亭'){
+     const row = t.row, col = t.col;
+     const lastRow = rows.length - 1;
+     const rowCount = rows[row];
+     if(row === 0 || row === lastRow || col === 0 || col === rowCount - 1){
+       t.buildingProduce++;
+     }
+   }
   });
   // 5. 累加
   tileMap.forEach(t=>{ if(t.buildingPlaced) total+=t.buildingProduce; });
