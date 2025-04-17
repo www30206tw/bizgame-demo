@@ -178,15 +178,15 @@ function createBuildingCard(info){
     });
   }
 
+  // 2.5 如果這張卡本來就在「手排」中，也把自己隱藏
+   const hand = document.getElementById('hand');
+   if (hand.contains(card)) {
+     card.style.visibility = 'hidden';
+   }
+
   // 3. 強制 drag image 使用本體
   e.dataTransfer.setDragImage(card, card.clientWidth/2, card.clientHeight/2);
 });
-
-  // 4. 如果這張卡本來是在手排裡，就把自己隱藏（看起來像拿在手上）
-  const hand = document.getElementById('hand');
-  if (hand.contains(card)) {
-  card.style.visibility = 'hidden';
-  }
     
  card.addEventListener('dragend', e => {
   // 先把自身 tooltip 還原
