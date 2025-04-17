@@ -465,9 +465,6 @@ window.onload = () => {
   computeAdj();
   initMapArea();
 
-  // 懸浮窗參考 (HTML 中已新增)
-  const hoverCover = document.getElementById('hcover');
-
   // 初始顯示
   updateRoundDisplay();
   updateResourceDisplay();
