@@ -163,22 +163,26 @@ function createBuildingCard(info){
   // 拖曳
   card.draggable = true;
   card.addEventListener('dragstart', e => {
-    e.dataTransfer.setData('cardId', card.dataset.cardId);
-     // 隱藏其他卡牌，只保留拖曳中的這張
-  setTimeout(() => {
-    document.querySelectorAll('.card').forEach(c => {
-      if (c.dataset.cardId !== card.dataset.cardId) {
-        c.style.visibility = 'hidden';
-      }
-    });
-  }, 0);
- });
+  // 1. 設定拖曳資料
+  e.dataTransfer.setData('cardId', card.dataset.cardId);
+
+  // 2. 立刻隱藏其他卡牌 (同步執行，讓瀏覽器擷取的 drag image 只剩下 this card)
+  document.querySelectorAll('.card').forEach(c => {
+    if (c.dataset.cardId !== card.dataset.cardId) {
+      c.style.visibility = 'hidden';
+    }
+  });
+
+  // 3. （可選）強制 drag image 就用這張 card 本體
+  e.dataTransfer.setDragImage(card, card.clientWidth/2, card.clientHeight/2);
+});
+
   card.addEventListener('dragend', e => {
-  // 拖曳結束，恢復所有卡牌
+  // 拖曳結束，一併把所有卡片還原顯示
   document.querySelectorAll('.card').forEach(c => {
     c.style.visibility = 'visible';
   });
- });
+});
   return card;
 }
 
