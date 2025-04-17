@@ -165,6 +165,10 @@ function createBuildingCard(info){
   card.addEventListener('dragstart', e => {
   // 1. 設定拖曳資料
   e.dataTransfer.setData('cardId', card.dataset.cardId);
+  
+  // 1.1 暫時隱藏這張卡牌的 tooltip，以免出現在 drag image 上
+  const tip = card.querySelector('.tooltip');
+  if (tip) tip.style.display = 'none';
 
   // 2. 立刻隱藏其他卡牌 (同步執行，讓瀏覽器擷取的 drag image 只剩下 this card)
   document.querySelectorAll('.card').forEach(c => {
@@ -178,6 +182,10 @@ function createBuildingCard(info){
 });
 
   card.addEventListener('dragend', e => {
+  // 拖曳結束，先把這張卡牌的 tooltip 恢復
+  const tip = card.querySelector('.tooltip');
+  if (tip) tip.style.display = '';
+    
   // 拖曳結束，一併把所有卡片還原顯示
   document.querySelectorAll('.card').forEach(c => {
     c.style.visibility = 'visible';
