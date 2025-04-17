@@ -287,6 +287,7 @@ window.onload = function(){
     const cAbility = c.querySelector('.card-ability')?.innerText || "";
 
     const newCard = document.createElement('div');
+    newCard.draggable = true;
     newCard.className = 'card';
     newCard.dataset.type = 'building';
     newCard.dataset.produce = baseP;
@@ -303,6 +304,9 @@ window.onload = function(){
     `;
     newCard.addEventListener('dragstart', e => {
   // 1) 先針對手排中「所有」卡牌，若不是自己，就隱藏
+    document.querySelectorAll('.card').forEach(c => {
+    c.style.visibility = '';
+  });
   const allCards = hand.querySelectorAll('.card');
   allCards.forEach(cardElem => {
     if(cardElem !== newCard) {
