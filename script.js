@@ -164,9 +164,21 @@ function createBuildingCard(info){
   card.draggable = true;
   card.addEventListener('dragstart', e => {
     e.dataTransfer.setData('cardId', card.dataset.cardId);
-    setTimeout(()=>card.style.display='none', 0);
+     // 隱藏其他卡牌，只保留拖曳中的這張
+  setTimeout(() => {
+    document.querySelectorAll('.card').forEach(c => {
+      if (c.dataset.cardId !== card.dataset.cardId) {
+        c.style.visibility = 'hidden';
+      }
+    });
+  }, 0);
+ });
+  card.addEventListener('dragend', e => {
+  // 拖曳結束，恢復所有卡牌
+  document.querySelectorAll('.card').forEach(c => {
+    c.style.visibility = 'visible';
   });
-  card.addEventListener('dragend', e => card.style.display='');
+ });
   return card;
 }
 
