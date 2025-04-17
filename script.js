@@ -361,8 +361,6 @@ window.onload = () => {
   startDrawPhase();
 };
   document.getElementById('refresh-btn').onclick = refreshCards;
-  document.getElementById('skipDraw').onclick   = skipDraw;
-  document.getElementById('confirmDraw').onclick= confirmDraw;
   infoBtn.onclick     = ()=>infoModal.style.display='flex';
   closeInfoBtn.onclick= ()=>infoModal.style.display='none';
 };
