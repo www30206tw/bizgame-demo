@@ -352,14 +352,12 @@ window.onload = () => {
   endTurnBtn.onclick = () => {
   // 1. 計算本回合實際入帳並累加
   currentGold += computeEffectiveRevenue();
-  // 2. 重置回合收益為 0
-  roundRevenue = 0;
-  // 3. 更新 UI（金幣 & 回合收益）
+  // 2. 更新 UI（金幣 & 回合收益）
   updateResourceDisplay();
-  // 4. 回合 +1 並更新顯示
+  // 3. 回合 +1 並更新顯示
   currentRound++;
   updateRoundDisplay();
-  // 5. 開始下一輪抽卡
+  // 4. 開始下一輪抽卡
   startDrawPhase();
 };
   document.getElementById('refresh-btn').onclick = refreshCards;
