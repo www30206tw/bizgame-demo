@@ -301,17 +301,44 @@ window.onload = function(){
       <div class="card-ability">${cAbility}</div>
       <div class="tooltip">${cLabel}：${labelEffectDesc[cLabel] || ""}</div>
     `;
-    newCard.draggable = true;
-    let dragClone = null;
-
     newCard.addEventListener('dragstart', e => {
-      // ...
-    });
-    newCard.addEventListener('dragend', e => {
-      // ...
-    });
-    hand.appendChild(newCard);
+  // 1) 先針對手排中「所有」卡牌，若不是自己，就隱藏
+  const allCards = hand.querySelectorAll('.card');
+  allCards.forEach(cardElem => {
+    if(cardElem !== newCard) {
+      cardElem.style.visibility = 'hidden';
+    }
   });
+
+  // 2) 原本已有的 clone 代替顯示
+  dragClone = newCard.cloneNode(true);
+  dragClone.style.position = 'absolute';
+  dragClone.style.left = '-9999px';
+  dragClone.style.top = '-9999px';
+  document.body.appendChild(dragClone);
+
+  e.dataTransfer.setData('cardId', newCard.dataset.cardId);
+  e.dataTransfer.setData('text/plain', cName);
+  e.dataTransfer.setDragImage(dragClone, 0, 0);
+
+  // 3) 隱藏自己即可
+  setTimeout(() => { newCard.style.display = 'none'; }, 0);
+});
+
+newCard.addEventListener('dragend', e => {
+  // 1) 恢復手排中所有卡
+  const allCards = hand.querySelectorAll('.card');
+  allCards.forEach(cardElem => {
+    cardElem.style.visibility = ''; // 清空 or set 'visible'
+  });
+
+  // 2) 既有 clone 移除
+  newCard.style.display = '';
+  if (dragClone) {
+    document.body.removeChild(dragClone);
+    dragClone = null;
+  }
+});
   // 完整結束 confirmDraw
   drawSection.style.display = 'none';
 };
@@ -329,50 +356,49 @@ window.onload = function(){
    ***********************/
   function placeBuildingOnTile(tile, cardElem){
   console.log(`placeBuildingOnTile => tile#${tile.id} type=${tile.type}`);
-  // 若已有建築先扣除
+
+  // 1) 若已有建築先扣除
   if(tile.buildingPlaced){
     roundRevenue -= tile.buildingProduce;
     tile.buildingProduce = 0;
     tile.slumBonusGranted = false;
   }
-  // 記錄該建築的基礎產出與標籤（使用卡牌內的數值，不固定預設為6）
+
+  // 2) 更新 tile 狀態
   tile.buildingBaseProduce = parseInt(cardElem.dataset.produce);
   tile.buildingLabel = cardElem.dataset.label;
   tile.buildingName = cardElem.querySelector('.card-name').innerText;
-  
-  // 依據地塊計算基本產出
+
   let produceVal = tile.buildingBaseProduce;
-  if(tile.type === 'city') {
-    produceVal += 2; // 城市地塊效果：+2
-    if(cardElem.dataset.label === '繁華區'){
-        produceVal += 4; // 若建築標籤為繁華區，再加 +4
+  if(tile.type === 'city'){
+    produceVal += 2;
+    if(tile.buildingLabel === '繁華區'){
+      produceVal += 4;
     }
+  } else if(tile.type === 'river'){
+    produceVal -= 1;
   }
-  if(tile.type === 'river') produceVal -= 1;
-  
-  // 不再直接計算貧民窟相鄰加成與 BFS 群聚，此部分移至 recalcRevenueFromScratch()
   tile.buildingProduce = produceVal;
   tile.buildingPlaced = true;
-    
-  // 找到真正位於手排中的卡（以防 cardElem 為 clone）
+
+  // **3) 從手排移除這張卡**
   const realCardInHand = hand.querySelector(`[data-card-id="${cardElem.dataset.cardId}"]`);
   if(realCardInHand) {
     realCardInHand.remove();
-  }  
-  // 正確取得該地塊的 DOM（請確保這行下面不要有非註解的文字）
-  const hex = mapArea.querySelector(`[data-tile-id="${tile.id}"]`);
-  if(!hex){
-    console.error("找不到對應 tile 的 DOM，tile.id =", tile.id);
-    return;
   }
-    
-  // 更新地塊顯示（包含能力）
-  const bName = cardElem.querySelector('.card-name').innerText;
-  const bAbility = cardElem.querySelector('.card-ability')?.innerText || "";
-  hex.innerHTML = `<div class="hex-name">${bName}</div>
-                   <div class="hex-ability">${bAbility}</div>`;
-  
-  // 放置完建築後，統一重新計算全地圖產出
+
+  // **4) 更新地塊上的顯示**(例如地塊名稱、能力)
+  const hex = mapArea.querySelector(`[data-tile-id="${tile.id}"]`);
+  if(hex){
+    const bName = tile.buildingName; // or cardElem
+    const bAbility = cardElem.querySelector('.card-ability')?.innerText || "";
+    hex.innerHTML = `
+      <div class="hex-name">${bName}</div>
+      <div class="hex-ability">${bAbility}</div>
+    `;
+  }
+
+  // **5) 重新計算回合收益**
   recalcRevenueFromScratch();
 }
 
