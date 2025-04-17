@@ -37,7 +37,11 @@ const cardPoolData = [
   { name:'廢土站', rarity:'普通', label:'荒原',   baseProduce:3 },
   { name:'廢材棚', rarity:'普通', label:'荒原',   baseProduce:4 },
   { name:'社群站', rarity:'普通', label:'貧民窟', baseProduce:4, specialAbility:'有鄰居額外+1' },
-  { name:'彈出商亭', rarity:'普通', label:'繁華區', baseProduce:5, specialAbility:'邊緣格額外+1' }
+  { name:'彈出商亭', rarity:'普通', label:'繁華區', baseProduce:5, specialAbility:'邊緣格額外+1' },
+  { name:'地脈節點', rarity:'普通', label:'荒原', baseProduce:6, specialAbility:'鄰2族群+1' },
+  { name:'匯聚平臺', rarity:'稀有', label:'貧民窟', baseProduce:5, specialAbility:'≥3鄰額外+2' },
+   { name:'流動站',   rarity:'稀有', label:'河流',   baseProduce:5, specialAbility:'河流鄰格+1' },
+   { name:'焚料方艙', rarity:'稀有', label:'荒原',   baseProduce:8, specialAbility:'偶數回合−1，最低4' }
 ];
 
 const labelEffectDesc = {
@@ -357,6 +361,39 @@ function recalcRevenueFromScratch(){
      const rowCount = rows[row];
      if(row === 0 || row === lastRow || col === 0 || col === rowCount - 1){
        t.buildingProduce++;
+     }
+   }
+  // 地脈節點：若相鄰建築恰為2，則包含自己在內的3座每座+1
+   if(t.buildingName==='地脈節點'){
+     const nei = t.adjacency
+       .map(id=>tileMap.find(x=>x.id===id))
+       .filter(x=>x && x.buildingPlaced);
+     if(nei.length===2){
+       t.buildingProduce++;
+       nei.forEach(x=>x.buildingProduce++);
+     }
+   }
+  // 匯聚平臺：若與3座以上建築相鄰，額外+2
+   if(t.buildingName==='匯聚平臺'){
+     const cnt = t.adjacency
+       .map(id=>tileMap.find(x=>x.id===id))
+       .filter(x=>x && x.buildingPlaced)
+       .length;
+     if(cnt>3) t.buildingProduce+=2;
+   }
+  / 流動站：若自身在河流上，相鄰且也在河流的建築每座+1
+   if(t.buildingName==='流動站' && t.type==='river'){
+     t.adjacency.forEach(id=>{
+       const x=tileMap.find(y=>y.id===id);
+       if(x && x.buildingPlaced && x.type==='river'){
+         x.buildingProduce++;
+       }
+     });
+   }
+  // 焚料方艙：偶數回合產出−1，下限4
+   if(t.buildingName==='焚料方艙'){
+     if(currentRound % 2 === 0){
+       t.buildingProduce = Math.max(t.buildingProduce - 1, 4);
      }
    }
   });
