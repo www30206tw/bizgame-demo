@@ -183,8 +183,8 @@ function createBuildingCard(info){
 });
 
   // 3.1 延遲一下再真正隱藏手排中的自己（拿在手上）
-  const hand = document.getElementById('hand');
   setTimeout(() => {
+    const hand = document.getElementById('hand');
     if (hand.contains(card)) {
       card.style.display = 'none';
     }
