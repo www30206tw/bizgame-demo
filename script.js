@@ -180,16 +180,16 @@ function createBuildingCard(info){
 
   // 3. 強制 drag image 使用本體
   e.dataTransfer.setDragImage(card, card.clientWidth/2, card.clientHeight/2);
+
+  // 3.1 拖曳啟動後，延遲隱藏手排中的自己（拿在手上）
+  setTimeout(() => {
+  const hand = document.getElementById('hand');
+  if (hand.contains(card)) {
+    card.style.display = 'none';
+  }
+}, 0);
 });
 
-  // 3.1 延遲一下再真正隱藏手排中的自己（拿在手上）
-  setTimeout(() => {
-    const hand = document.getElementById('hand');
-    if (hand.contains(card)) {
-      card.style.display = 'none';
-    }
-  }, 0);
-  
  card.addEventListener('dragend', e => {
   // 先把自身 tooltip 還原
   const tip = card.querySelector('.tooltip');
