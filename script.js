@@ -135,6 +135,33 @@ function initMapArea(){
       if (card) placeBuildingOnTile(t, card);
     };
     mapArea.appendChild(hex);
+    // 滑鼠移入：顯示懸浮窗
+    hex.addEventListener('mouseenter', () => {
+      // 找到對應的 tile 物件
+      const tileData = tileMap.find(t => t.id === t.id && String(t.id) === hex.dataset.tileId);
+      let html = '';
+      if (!tileData.buildingPlaced) {
+     // 空地上顯示地塊類型
+        html = `<div>地塊類型：${tileData.type}</div>`;
+      } else {
+     // 已有建築：顯示建築名稱 + 本回合產出
+        html = `
+          <div>建築：${tileData.buildingName}</div>
+          <div>本回合產出：${tileData.buildingProduce}</div>
+        `;
+      }
+      hoverCover.innerHTML = html;
+   // 計算位置：放在 hex 右方 5px
+      const rect = hex.getBoundingClientRect();
+      hoverCover.style.top = `${rect.top}px`;
+      hoverCover.style.left = `${rect.right + 5}px`;
+      hoverCover.style.display = 'block';
+    });
+
+    // 滑鼠移出：隱藏懸浮窗
+    hex.addEventListener('mouseleave', () => {
+      hoverCover.style.display = 'none';
+    });
   });
 }
 
@@ -437,6 +464,9 @@ window.onload = () => {
   tileMap = createTileMap31();
   computeAdj();
   initMapArea();
+
+  // 懸浮窗參考 (HTML 中已新增)
+  const hoverCover = document.getElementById('hcover');
 
   // 初始顯示
   updateRoundDisplay();
