@@ -182,6 +182,12 @@ function createBuildingCard(info){
   e.dataTransfer.setDragImage(card, card.clientWidth/2, card.clientHeight/2);
 });
 
+ // 3.1 如果這張卡在「手排」裡，就把它隱藏（顯示被拿在手上）
+  const hand = document.getElementById('hand');
+  if (hand.contains(card)) {
+     card.style.visibility = 'hidden';
+ }
+    
  card.addEventListener('dragend', e => {
   // 先把自身 tooltip 還原
   const tip = card.querySelector('.tooltip');
