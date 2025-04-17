@@ -182,11 +182,11 @@ function createBuildingCard(info){
   e.dataTransfer.setDragImage(card, card.clientWidth/2, card.clientHeight/2);
 });
 
- // 3.1 如果這張卡在「手排」裡，就把它隱藏（顯示被拿在手上）
+  // 4. 如果這張卡本來是在手排裡，就把自己隱藏（看起來像拿在手上）
   const hand = document.getElementById('hand');
   if (hand.contains(card)) {
-     card.style.visibility = 'hidden';
- }
+  card.style.visibility = 'hidden';
+  }
     
  card.addEventListener('dragend', e => {
   // 先把自身 tooltip 還原
@@ -198,6 +198,11 @@ function createBuildingCard(info){
   pool.querySelectorAll('.card').forEach(c => {
     c.style.visibility = 'visible';
   });
+  // 如果自己還在手排，就把自己顯示出來
+  const hand = document.getElementById('hand');
+  if (hand.contains(card)) {
+  card.style.visibility = 'visible';
+ }
  });
   return card;
 }
