@@ -381,7 +381,7 @@ function recalcRevenueFromScratch(){
        .length;
      if(cnt>3) t.buildingProduce+=2;
    }
-  / 流動站：若自身在河流上，相鄰且也在河流的建築每座+1
+  // 流動站：若自身在河流上，相鄰且也在河流的建築每座+1
    if(t.buildingName==='流動站' && t.type==='river'){
      t.adjacency.forEach(id=>{
        const x=tileMap.find(y=>y.id===id);
