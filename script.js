@@ -178,16 +178,18 @@ function createBuildingCard(info){
     });
   }
 
-  // 2.5 如果這張卡本來就在「手排」中，也把自己隱藏
-   const hand = document.getElementById('hand');
-   if (hand.contains(card)) {
-     card.style.visibility = 'hidden';
-   }
-
   // 3. 強制 drag image 使用本體
   e.dataTransfer.setDragImage(card, card.clientWidth/2, card.clientHeight/2);
 });
-    
+
+  // 3.1 延遲一下再真正隱藏手排中的自己（拿在手上）
+  const hand = document.getElementById('hand');
+  setTimeout(() => {
+    if (hand.contains(card)) {
+      card.style.display = 'none';
+    }
+  }, 0);
+  
  card.addEventListener('dragend', e => {
   // 先把自身 tooltip 還原
   const tip = card.querySelector('.tooltip');
@@ -198,11 +200,12 @@ function createBuildingCard(info){
   pool.querySelectorAll('.card').forEach(c => {
     c.style.visibility = 'visible';
   });
-  // 如果自己還在手排，就把自己顯示出來
+   
+  // 3.2 拖曳結束後，若自己還在手排，恢復顯示
   const hand = document.getElementById('hand');
   if (hand.contains(card)) {
-  card.style.visibility = 'visible';
- }
+    card.style.display = '';
+  }
  });
   return card;
 }
