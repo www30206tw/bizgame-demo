@@ -170,27 +170,29 @@ function createBuildingCard(info){
   const tip = card.querySelector('.tooltip');
   if (tip) tip.style.display = 'none';
 
-  // 2. 立刻隱藏其他卡牌 (同步執行，讓瀏覽器擷取的 drag image 只剩下 this card)
-  document.querySelectorAll('.card').forEach(c => {
-    if (c.dataset.cardId !== card.dataset.cardId) {
-      c.style.visibility = 'hidden';
-    }
-  });
+  // 2. 只對「抽卡區」(#card-pool) 隱藏其他卡牌
+  const pool = document.getElementById('card-pool');
+  if (pool.contains(card)) {
+    pool.querySelectorAll('.card').forEach(c => {
+      if (c !== card) c.style.visibility = 'hidden';
+    });
+  }
 
-  // 3. （可選）強制 drag image 就用這張 card 本體
+  // 3. 強制 drag image 使用本體
   e.dataTransfer.setDragImage(card, card.clientWidth/2, card.clientHeight/2);
 });
 
-  card.addEventListener('dragend', e => {
-  // 拖曳結束，先把這張卡牌的 tooltip 恢復
+ card.addEventListener('dragend', e => {
+  // 先把自身 tooltip 還原
   const tip = card.querySelector('.tooltip');
   if (tip) tip.style.display = '';
-    
-  // 拖曳結束，一併把所有卡片還原顯示
-  document.querySelectorAll('.card').forEach(c => {
+
+  // 只對「抽卡區」的卡，恢復可見
+  const pool = document.getElementById('card-pool');
+  pool.querySelectorAll('.card').forEach(c => {
     c.style.visibility = 'visible';
   });
-});
+ });
   return card;
 }
 
