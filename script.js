@@ -188,7 +188,7 @@ function initMapArea(){
     const labelPopup = document.createElement('div');
     labelPopup.className = 'hcover hcover-popup';
     labelPopup.style.top  = `${rect.top}px`;
-    labelPopup.style.left = `${rect.right + 130}px`;
+    labelPopup.style.left = `${rect.right + 160}px`;
     labelPopup.style.display = 'block';
     labelPopup.innerText = `${tileData.buildingLabel}：${labelEffectDesc[tileData.buildingLabel]}`;
     document.body.appendChild(labelPopup);
@@ -196,8 +196,8 @@ function initMapArea(){
     // 3. 本回合產出
     const producePopup = document.createElement('div');
     producePopup.className = 'hcover hcover-popup';
-    producePopup.style.top  = `${rect.top + 50}px`;
-    producePopup.style.left = `${rect.right + 130}px`;
+    producePopup.style.top  = `${rect.top + 75}px`;
+    producePopup.style.left = `${rect.right + 160}px`;
     producePopup.style.display = 'block';
     producePopup.innerText = `本回合產出：${tileData.buildingProduce}`;
     document.body.appendChild(producePopup);
