@@ -68,7 +68,7 @@ const tileTypeNames = {
 };
 
 // ——— 支付節點設定 ———
-const paymentSchedule = { 5:100, 10:400, 16:1000 };
+const paymentSchedule = { 5:150, 10:600, 16:1200 };
 
 let tileMap = [];
 
