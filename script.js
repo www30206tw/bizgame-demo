@@ -60,7 +60,7 @@ const directionsOdd = [
 ];
 
 // ——— 支付節點設定 ———
-const paymentSchedule = { 5:100, 10:300, 16:600 };
+const paymentSchedule = { 5:100, 10:400, 16:1000 };
 
 let tileMap = [];
 
