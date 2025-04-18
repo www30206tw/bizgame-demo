@@ -22,15 +22,7 @@ const typeMapping = {
 };
 
 const cardPoolData = [
-  { name:'建築A', rarity:'普通', label:'荒原',      baseProduce:6 },
-  { name:'建築B', rarity:'普通', label:'貧民窟',    baseProduce:6 },
-  { name:'建築C', rarity:'稀有', label:'荒原',      baseProduce:6 },
-  { name:'建築D', rarity:'稀有', label:'貧民窟',    baseProduce:6 },
-  { name:'建築E', rarity:'史詩', label:'繁華區',    baseProduce:6 },
-  { name:'建築F', rarity:'史詩', label:'河流',      baseProduce:6 },
-  { name:'建築G', rarity:'傳說', label:'繁華區',    baseProduce:6 },
-  { name:'建築H', rarity:'傳說', label:'河流',      baseProduce:6 },
-  { name:'淨水站', rarity:'普通', label:'河流',     baseProduce:4, specialAbility:'50%機率額外+1' },
+  { name:'淨水站', rarity:'普通', label:'河流',     baseProduce:4, specialAbility:'回合結束時，有50%機率產出額外+1' },
   { name:'星軌會館', rarity:'稀有', label:'繁華區',  baseProduce:6, specialAbility:'無鄰居額外+2' },
   { name:'摩天坊', rarity:'普通', label:'繁華區', baseProduce:5 },
   { name:'集貧居', rarity:'普通', label:'貧民窟', baseProduce:4 },
@@ -40,8 +32,12 @@ const cardPoolData = [
   { name:'彈出商亭', rarity:'普通', label:'繁華區', baseProduce:5, specialAbility:'邊緣格額外+1' },
   { name:'地脈節點', rarity:'普通', label:'荒原', baseProduce:6, specialAbility:'鄰2族群+1' },
   { name:'匯聚平臺', rarity:'稀有', label:'貧民窟', baseProduce:5, specialAbility:'≥3鄰額外+2' },
-   { name:'流動站',   rarity:'稀有', label:'河流',   baseProduce:5, specialAbility:'河流鄰格+1' },
-   { name:'焚料方艙', rarity:'稀有', label:'荒原',   baseProduce:8, specialAbility:'偶數回合−1，最低4' }
+  { name:'流動站',   rarity:'稀有', label:'河流',   baseProduce:5, specialAbility:'河流鄰格+1' },
+  { name:'焚料方艙', rarity:'稀有', label:'荒原',   baseProduce:8, specialAbility:'偶數回合−1，最低4' },
+  { name:'廉租居',     rarity:'普通', baseProduce:3, label:'貧民窟' },
+  { name:'灣岸輸能站', rarity:'普通', baseProduce:6, label:'河流', specialAbility:'若沒有位於河流，每回合產出 -1 金幣' },
+  { name:'垂直農倉',   rarity:'稀有', baseProduce:6, label:'貧民窟', specialAbility:'每有 1 座垂直農倉相鄰，產出 +1 金幣（最多 +2）' },
+  { name:'通訊樞紐',   rarity:'稀有', baseProduce:6, label:'荒原',   specialAbility:'此建築可同時視為擁有所有地塊 tag，能觸發所有地塊 tag 效果（不改變地塊本身）' }
 ];
 
 const labelEffectDesc = {
@@ -505,6 +501,34 @@ function recalcRevenueFromScratch(){
        t.buildingProduce = Math.max(t.buildingProduce - 1, 4);
      }
    }
+  // 灣岸輸能站：若不在河流地塊，每回合 −1
+  if (t.buildingName === '灣岸輸能站' && t.type !== 'river') {
+    t.buildingProduce -= 1;
+  }
+  // 垂直農倉：每有 1 座鄰接的垂直農倉，+1（金幣），最多 +2
+  if (t.buildingName === '垂直農倉') {
+    const neiCount = t.adjacency.filter(id => {
+      const nt = tileMap.find(x => x.id === id);
+      return nt && nt.buildingPlaced && nt.buildingName === '垂直農倉';
+    }).length;
+    t.buildingProduce += Math.min(neiCount, 2);
+  }
+  // 通訊樞紐：觸發所有地塊標籤效果（不改變地塊本身的 City/Slum…效果）
+  if (t.buildingName === '通訊樞紐') {
+    // 繁華區標籤：蓋在繁華區時 +4
+    if (t.type === 'city') t.buildingProduce += 4;
+    // 貧民窟標籤：蓋在貧民窟時，相鄰每座建築 +1
+    if (t.type === 'slum') {
+      const adjCount = t.adjacency.filter(id => {
+        const nt = tileMap.find(x => x.id === id);
+        return nt && nt.buildingPlaced;
+      }).length;
+      t.buildingProduce += adjCount;
+    }
+    // 河流標籤：蓋在河流時 +3
+    if (t.type === 'river') t.buildingProduce += 3;
+    // 荒原標籤的「50% 機率不產出」會在 computeEffectiveRevenue() 階段自動套用
+  }
   });
   // 5. 累加
   tileMap.forEach(t=>{ if(t.buildingPlaced) total+=t.buildingProduce; });
