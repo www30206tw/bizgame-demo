@@ -160,6 +160,7 @@ function initMapArea(){
     popup.innerText = `地塊類型：${tileData.type}（${tileTypeNames[tileData.type]}）`;
     popup.style.top  = `${rect.top}px`;
     popup.style.left = `${rect.right + 5}px`;
+    popup.style.display = 'block';
     document.body.appendChild(popup);
 
     } 
@@ -171,6 +172,7 @@ function initMapArea(){
     cardPopup.className = 'hcover hcover-popup';
     cardPopup.style.top  = `${rect.top}px`;
     cardPopup.style.left = `${rect.right + 5}px`;
+    cardPopup.style.display = 'block';
     cardPopup.innerHTML = `
       <div class="card" style="width:120px;height:220px;">
         <div class="card-gold-output">${tileData.buildingBaseProduce}</div>
@@ -187,6 +189,7 @@ function initMapArea(){
     labelPopup.className = 'hcover hcover-popup';
     labelPopup.style.top  = `${rect.top}px`;
     labelPopup.style.left = `${rect.right + 130}px`;
+    labelPopup.style.display = 'block';
     labelPopup.innerText = `${tileData.buildingLabel}：${labelEffectDesc[tileData.buildingLabel]}`;
     document.body.appendChild(labelPopup);
 
@@ -195,6 +198,7 @@ function initMapArea(){
     producePopup.className = 'hcover hcover-popup';
     producePopup.style.top  = `${rect.top + 50}px`;
     producePopup.style.left = `${rect.right + 130}px`;
+    producePopup.style.display = 'block';
     producePopup.innerText = `本回合產出：${tileData.buildingProduce}`;
     document.body.appendChild(producePopup);
    }
