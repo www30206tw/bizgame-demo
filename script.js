@@ -119,6 +119,7 @@ function initMapArea(){
   const shapeW = maxX - minX + tileW, shapeH = maxY - minY + tileH;
   const centerX = (mapArea.clientWidth - shapeW)/2;
   const centerY = (mapArea.clientHeight - shapeH)/2;
+  const hoverCover = document.getElementById('hcover');
 
   tileMap.forEach(t => {
     const hex = document.createElement('div');
@@ -134,7 +135,7 @@ function initMapArea(){
       const card = document.querySelector(`[data-card-id="${cid}"]`);
       if (card) placeBuildingOnTile(t, card);
     };
-    mapArea.appendChild(hex);
+    
     // 滑鼠移入：顯示懸浮窗
     hex.addEventListener('mouseenter', () => {
       // 找到對應的 tile 物件
@@ -162,6 +163,8 @@ function initMapArea(){
     hex.addEventListener('mouseleave', () => {
       hoverCover.style.display = 'none';
     });
+
+     mapArea.appendChild(hex);
   });
 }
 
