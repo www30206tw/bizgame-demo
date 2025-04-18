@@ -213,7 +213,6 @@ function createBuildingCard(info){
     <div class="card-ability">${info.specialAbility||''}</div>
     <div class="tooltip">
       ${info.label}：${labelEffectDesc[info.label]||''}
-      ${info.specialAbility?'/'+info.specialAbility:''}
     </div>`;
   // 點選選牌
   card.onclick = () => {
@@ -333,8 +332,7 @@ function placeBuildingOnTile(tile, card){
   // 4. 更新地塊顯示
   const hex = document.querySelector(`[data-tile-id="${tile.id}"]`);
   hex.innerHTML = `
-    <div class="hex-name">${tile.buildingName}</div>
-    <div class="hex-ability">${tile.buildingLabel}</div>`;
+      <div class="hex-name">${tile.buildingName}</div>`;
   // 5. 重算收益
   recalcRevenueFromScratch();
 }
