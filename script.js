@@ -267,6 +267,13 @@ function createBuildingCard(info){
     </div>`;
   // 點選選牌
   card.onclick = () => {
+    const pool = document.getElementById('card-pool');
+    const selected = pool.querySelectorAll('.card.selected');
+    // 如果還沒選中自己，且已經有 2 張被選，阻止第三張
+    if (!card.classList.contains('selected') && selected.length >= 2) {
+      alert('只能選擇兩張卡！');
+      return;
+    }
     card.classList.toggle('selected');
   };
   // 拖曳
@@ -343,7 +350,10 @@ function skipDraw(){
 }
 function confirmDraw(){
   const selected = Array.from(document.querySelectorAll('.card.selected'));
-  if(selected.length < 2){ alert('請選兩張'); return; }
+   // 嚴格要求「等於 2 張」才能通過
+  if (selected.length !== 2) {
+    alert('請選擇且只能選擇兩張卡！');
+    return;
   const hand = document.getElementById('hand');
   selected.forEach(c => {
     const info = {
