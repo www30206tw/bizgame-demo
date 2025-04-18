@@ -59,6 +59,14 @@ const directionsOdd = [
   {dr:0,dc:1},{dr:1,dc:-1},{dr:1,dc:0}
 ];
 
+// ——— 地塊類型中英文對照 ———
+const tileTypeNames = {
+  city:      '繁華區',
+  slum:      '貧民窟',
+  river:     '河流',
+  wasteland: '荒原'
+};
+
 // ——— 支付節點設定 ———
 const paymentSchedule = { 5:100, 10:400, 16:1000 };
 
@@ -140,30 +148,61 @@ function initMapArea(){
     
     // 滑鼠移入：顯示懸浮窗
     hex.addEventListener('mouseenter', () => {
-      // 找到對應的 tile 物件
-      const tileData = tileMap.find(t => t.id === t.id && String(t.id) === hex.dataset.tileId);
-      let html = '';
-      if (!tileData.buildingPlaced) {
-     // 空地上顯示地塊類型
-        html = `<div>地塊類型：${tileData.type}</div>`;
-      } else {
-     // 已有建築：顯示建築名稱 + 本回合產出
-        html = `
-          <div>建築：${tileData.buildingName}</div>
-          <div>本回合產出：${tileData.buildingProduce}</div>
-        `;
-      }
-      hoverCover.innerHTML = html;
-   // 計算位置：放在 hex 右方 5px
-      const rect = hex.getBoundingClientRect();
-      hoverCover.style.top = `${rect.top}px`;
-      hoverCover.style.left = `${rect.right + 5}px`;
-      hoverCover.style.display = 'block';
-    });
+      document.querySelectorAll('.hcover-popup').forEach(el => el.remove());
+
+  const tileData = tileMap.find(t => String(t.id) === hex.dataset.tileId);
+  const rect = hex.getBoundingClientRect();
+
+  if (!tileData.buildingPlaced) {
+    // —— 空地：中英地塊名稱 —— 
+    const popup = document.createElement('div');
+    popup.className = 'hcover hcover-popup';
+    popup.innerText = `地塊類型：${tileData.type}（${tileTypeNames[tileData.type]}）`;
+    popup.style.top  = `${rect.top}px`;
+    popup.style.left = `${rect.right + 5}px`;
+    document.body.appendChild(popup);
+
+    } 
+  else {
+    // —— 已放建築：三個懸浮框 —— 
+
+    // 1. 完整卡牌
+    const cardPopup = document.createElement('div');
+    cardPopup.className = 'hcover hcover-popup';
+    cardPopup.style.top  = `${rect.top}px`;
+    cardPopup.style.left = `${rect.right + 5}px`;
+    cardPopup.innerHTML = `
+      <div class="card" style="width:120px;height:220px;">
+        <div class="card-gold-output">${tileData.buildingBaseProduce}</div>
+        <div class="card-image-area"></div>
+        <div class="card-name">${tileData.buildingName}</div>
+        <div class="card-rarity">${tileData.buildingRarity}</div>
+        <div class="card-label">${tileData.buildingLabel}</div>
+        <div class="card-ability">${tileData.buildingSpecialAbility}</div>
+      </div>`;
+    document.body.appendChild(cardPopup);
+
+    // 2. 標籤能力
+    const labelPopup = document.createElement('div');
+    labelPopup.className = 'hcover hcover-popup';
+    labelPopup.style.top  = `${rect.top}px`;
+    labelPopup.style.left = `${rect.right + 130}px`;
+    labelPopup.innerText = `${tileData.buildingLabel}：${labelEffectDesc[tileData.buildingLabel]}`;
+    document.body.appendChild(labelPopup);
+
+    // 3. 本回合產出
+    const producePopup = document.createElement('div');
+    producePopup.className = 'hcover hcover-popup';
+    producePopup.style.top  = `${rect.top + 50}px`;
+    producePopup.style.left = `${rect.right + 130}px`;
+    producePopup.innerText = `本回合產出：${tileData.buildingProduce}`;
+    document.body.appendChild(producePopup);
+   }
+  });
 
     // 滑鼠移出：隱藏懸浮窗
     hex.addEventListener('mouseleave', () => {
-      hoverCover.style.display = 'none';
+      document.querySelectorAll('.hcover-popup').forEach(el => el.remove());
     });
 
      mapArea.appendChild(hex);
@@ -320,6 +359,8 @@ function placeBuildingOnTile(tile, card){
   tile.buildingBaseProduce = parseInt(card.dataset.produce);
   tile.buildingLabel = card.dataset.label;
   tile.buildingName  = card.querySelector('.card-name').innerText;
+  tile.buildingRarity      = card.querySelector('.card-rarity').innerText;
+  tile.buildingSpecialAbility = card.querySelector('.card-ability').innerText;
   let pv = tile.buildingBaseProduce;
   if(tile.type==='city'){ pv += 2;
     if(tile.buildingLabel==='繁華區') pv +=4;
