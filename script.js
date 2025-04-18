@@ -60,6 +60,9 @@ const directionsOdd = [
   {dr:0,dc:1},{dr:1,dc:-1},{dr:1,dc:0}
 ];
 
+// ——— 支付節點設定 ———
+const paymentSchedule = { 5:100, 10:300, 16:600 };
+
 let tileMap = [];
 
 // 工具函式
@@ -177,6 +180,22 @@ function updateResourceDisplay(){
 function updateRefreshButton(){
   const cost = 2 * (refreshCount + 1);
   document.getElementById('refresh-btn').textContent = `刷新卡片(${cost} 金幣)`;
+}
+
+// 更新右上角「時間軸」文字
+function updateStageBar() {
+  const bar = document.getElementById('stage-bar');
+  const rounds = Object.keys(paymentSchedule).map(n=>+n).sort((a,b)=>a-b);
+  // 找出下一個 >= currentRound 的節點回合
+  const next = rounds.find(r=>r >= currentRound);
+  if (next !== undefined) {
+    const cost = paymentSchedule[next], diff = next - currentRound;
+    bar.textContent = diff === 0
+      ? `本回合結束時將會收取${cost}金幣`
+      : `${diff}回合後將會收取${cost}金幣`;
+  } else {
+    bar.textContent = '';
+  }
 }
 
 // 建築卡牌生成
@@ -451,6 +470,7 @@ function startDrawPhase(){
   updateRefreshButton();
   document.getElementById('draw-section').style.display='flex';
   drawCards();
+  updateStageBar();
 }
 
 // window.onload 初始化
@@ -471,6 +491,7 @@ window.onload = () => {
   // 初始顯示
   updateRoundDisplay();
   updateResourceDisplay();
+  updateStageBar();
 
   // 事件
   startBtn.onclick = ()=>{ startScreen.style.display='none'; startDrawPhase(); };
@@ -483,8 +504,23 @@ window.onload = () => {
   endTurnBtn.onclick = () => {
   // 1. 計算本回合實際入帳並累加
   currentGold += computeEffectiveRevenue();
-  // 2. 更新 UI（金幣 & 回合收益）
   updateResourceDisplay();
+  // 2. 更新 UI（金幣 & 回合收益）
+  if (paymentSchedule[currentRound]) {
+      const cost = paymentSchedule[currentRound];
+      if (currentGold < cost) {
+        alert('遊戲結束，你輸了');
+        return; // 停止遊戲
+      }
+      // 扣款
+      currentGold -= cost;
+      updateResourceDisplay();
+      // 第16回合支付後即勝利
+      if (currentRound === 16) {
+        alert('遊戲勝利');
+        return;
+      }
+    }
   // 3. 回合 +1 並更新顯示
   currentRound++;
   updateRoundDisplay();
