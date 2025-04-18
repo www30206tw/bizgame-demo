@@ -7,6 +7,7 @@ let currentRound = 1;
 let currentGold = 0;
 let roundRevenue = 0;
 let refreshCount = 0;
+let warningNextRoundShown = false;
 
 const rows = [4,5,4,5,4,5,4];
 const typeMapping = {
@@ -235,6 +236,13 @@ function updateStageBar() {
     bar.textContent = diff === 0
       ? `本回合結束時將會收取${cost}金幣`
       : `${diff}回合後將會收取${cost}金幣`;
+   // 差 1 回合，且還沒顯示過，就彈提示
+    if (diff === 1 && !warningNextRoundShown) {
+      showModal('下個回合就需要支付金幣了!');
+      warningNextRoundShown = true;
+    }
+    // 如果差 >1，重置下回合提示開關
+    if (diff > 1) warningNextRoundShown = false;
   } else {
     bar.textContent = '';
   }
@@ -494,6 +502,16 @@ function recalcRevenueFromScratch(){
   updateResourceDisplay();
 }
 
+function showModal(message) {
+  const modal = document.getElementById('warning-modal');
+  document.getElementById('warning-text').innerText = message;
+  modal.style.display = 'flex';
+}
+// 關閉按鈕
+document.getElementById('warning-close-btn').onclick = () => {
+  document.getElementById('warning-modal').style.display = 'none';
+};
+
 // 輔助：計算實際入帳（含荒原50%失敗）
 function computeEffectiveRevenue(){
   let eff=0;
@@ -557,6 +575,8 @@ window.onload = () => {
       // 扣款
       currentGold -= cost;
       updateResourceDisplay();
+
+      showModal('成功支付金幣!');
       // 第16回合支付後即勝利
       if (currentRound === 16) {
         alert('遊戲勝利');
