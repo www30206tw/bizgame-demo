@@ -348,7 +348,7 @@ function confirmDraw(){
   const selected = Array.from(document.querySelectorAll('.card.selected'));
    // 嚴格要求「等於 2 張」才能通過
   if (selected.length !== 2) {
-    alert('請選擇且只能選擇兩張卡！');
+    alert('請選擇兩張卡！');
     return;}
   const hand = document.getElementById('hand');
   selected.forEach(c => {
