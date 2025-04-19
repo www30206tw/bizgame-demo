@@ -8,6 +8,7 @@ let currentGold = 0;
 let roundRevenue = 0;
 let refreshCount = 0;
 let warningNextRoundShown = false;
+let lastPlacement = null;
 
 const rows = [4,5,4,5,4,5,4];
 const typeMapping = {
@@ -147,6 +148,20 @@ function initMapArea(){
         const ok = confirm('此地塊已有建築，是否覆蓋?');
         if (!ok) return;
       }
+
+      // 記錄這次放置
+      lastPlacement = {
+      tileId: t.id,
+      building: {
+      name: card.querySelector('.card-name').innerText,
+      rarity: card.querySelector('.card-rarity').innerText,
+      label: card.dataset.label,
+      specialAbility: card.querySelector('.card-ability')?.innerText || '',
+      baseProduce: parseInt(card.dataset.produce)
+      }
+     };
+     // 啟用撤銷按鈕
+     document.getElementById('undo-btn').disabled = false;
 
       placeBuildingOnTile(t, card);
     };
@@ -581,6 +596,23 @@ window.onload = () => {
   const startScreen = document.getElementById('start-screen');
   const startBtn    = document.getElementById('startBtn');
   const endTurnBtn  = document.getElementById('end-turn-btn');
+  const undoBtn = document.getElementById('undo-btn');
+  undoBtn.disabled = true;  // 初始關閉
+  undoBtn.onclick = () => {
+  if (!lastPlacement) return;
+  // 1. 把地塊上建築移除
+  const tile = tileMap.find(x => x.id === lastPlacement.tileId);
+  tile.buildingPlaced = false;
+  // 2. 卡牌回手牌
+  const hand = document.getElementById('hand');
+  const card = createBuildingCard(lastPlacement.building);
+  hand.appendChild(card);
+  // 3. 重算收益
+  recalcRevenueFromScratch();
+  // 4. 關閉撤銷
+  lastPlacement = null;
+  undoBtn.disabled = true;
+  };
   const infoBtn     = document.getElementById('info-btn');
   const infoModal   = document.getElementById('info-modal');
   const closeInfoBtn= document.getElementById('close-info-btn');
@@ -629,6 +661,9 @@ window.onload = () => {
   currentRound++;
   updateRoundDisplay();
   // 4. 開始下一輪抽卡
+  // 開始新回合時，清除撤銷記錄
+  lastPlacement = null;
+  document.getElementById('undo-btn').disabled = true;
   startDrawPhase();
 };
   document.getElementById('refresh-btn').onclick = refreshCards;
