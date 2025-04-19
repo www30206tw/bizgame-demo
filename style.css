@@ -27,11 +27,13 @@ body {
 }
 
 .sidebar {
-  width: 60px;
+  width: 80px;              /* 根据按钮文字长度稍微加宽 */
   background: #ddd;
   display: flex;
+  flex-direction: column;   /* 改为竖直排列 */
   justify-content: center;
   align-items: center;
+  gap: 10px;  
 }
 
 .hand-cards {
