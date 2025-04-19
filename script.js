@@ -603,6 +603,8 @@ window.onload = () => {
   // 1. 把地塊上建築移除
   const tile = tileMap.find(x => x.id === lastPlacement.tileId);
   tile.buildingPlaced = false;
+  // 額外：清空地塊上的顯示，恢復成「?」
+  document.querySelector(`[data-tile-id="${tile.id}"]`).innerHTML = '?';
   // 2. 卡牌回手牌
   const hand = document.getElementById('hand');
   const card = createBuildingCard(lastPlacement.building);
