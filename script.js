@@ -232,13 +232,13 @@ function updateStageBar() {
     bar.textContent = diff === 0
       ? `本回合結束時將會收取${cost}金幣`
       : `${diff}回合後將會收取${cost}金幣`;
-   // 差 1 回合，且還沒顯示過，就彈提示
-    if (diff === 1 && !warningNextRoundShown) {
-      showModal('下個回合就需要支付金幣了!');
+   // 交付金幣的當回合，還沒顯示過，就彈提示
+    if (diff === 0 && !warningNextRoundShown) {
+      showModal('這個回合結束就需要支付金幣了!');
       warningNextRoundShown = true;
     }
-    // 如果差 >1，重置下回合提示開關
-    if (diff > 1) warningNextRoundShown = false;
+    // 如果差 >0，重置下回合提示開關
+    if (diff > 0) warningNextRoundShown = false;
   } else {
     bar.textContent = '';
   }
@@ -603,7 +603,7 @@ window.onload = () => {
   if (paymentSchedule[currentRound]) {
       const cost = paymentSchedule[currentRound];
       if (currentGold < cost) {
-        alert('遊戲結束，你輸了');
+        alert('下一把會更好');
         return; // 停止遊戲
       }
       // 扣款
