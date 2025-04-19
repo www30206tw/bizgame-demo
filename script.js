@@ -140,7 +140,15 @@ function initMapArea(){
       e.preventDefault();
       const cid = e.dataTransfer.getData('cardId');
       const card = document.querySelector(`[data-card-id="${cid}"]`);
-      if (card) placeBuildingOnTile(t, card);
+      if (!card) return;
+
+      // 如果此地塊已經有建築，先問玩家要不要覆蓋
+      if (t.buildingPlaced) {
+        const ok = confirm('此地塊已有建築，是否覆蓋?');
+        if (!ok) return;
+      }
+
+      placeBuildingOnTile(t, card);
     };
     
     // 滑鼠移入：顯示懸浮窗
