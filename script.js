@@ -603,7 +603,7 @@ window.onload = () => {
   if (paymentSchedule[currentRound]) {
       const cost = paymentSchedule[currentRound];
       if (currentGold < cost) {
-        alert('下一把會更好');
+        alert('下一把會更好｜>_<｜');
         return; // 停止遊戲
       }
       // 扣款
