@@ -280,34 +280,3 @@ body {
   opacity: 0.5;
   cursor: not-allowed;
 }
-
-/* ——— 關鍵回合視覺化時間軸 ——— */
-#timeline-container {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  margin: 10px 0;
-}
-#timeline {
-  width: 80%;
-  height: 12px;
-  position: relative;
-  /* 交錯條紋：可以自行調整顏色與間隔 */
-  background: repeating-linear-gradient(
-    45deg,
-    #4e79a7,
-    #4e79a7 16px,
-    #f28e2b 16px,
-    #f28e2b 32px
-  );
-  border-radius: 6px;
-  overflow: hidden;
-}
-/* 回合標記線 */
-#timeline .marker {
-  position: absolute;
-  top: -4px;
-  width: 2px;
-  height: 20px;
-  background: #e15759;
-}

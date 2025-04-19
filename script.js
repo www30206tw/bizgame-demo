@@ -244,6 +244,29 @@ function updateRefreshButton(){
   document.getElementById('refresh-btn').textContent = `刷新卡片(${cost} 金幣)`;
 }
 
+// 更新右上角「時間軸」文字
+function updateStageBar() {
+  const bar = document.getElementById('stage-bar');
+  const rounds = Object.keys(paymentSchedule).map(n=>+n).sort((a,b)=>a-b);
+  // 找出下一個 >= currentRound 的節點回合
+  const next = rounds.find(r=>r >= currentRound);
+  if (next !== undefined) {
+    const cost = paymentSchedule[next], diff = next - currentRound;
+    bar.textContent = diff === 0
+      ? `本回合結束時將會收取${cost}金幣`
+      : `${diff}回合後將會收取${cost}金幣`;
+   // 交付金幣的當回合，還沒顯示過，就彈提示
+    if (diff === 0 && !warningNextRoundShown) {
+      showModal('這個回合結束就需要支付金幣了!');
+      warningNextRoundShown = true;
+    }
+    // 如果差 >0，重置下回合提示開關
+    if (diff > 0) warningNextRoundShown = false;
+  } else {
+    bar.textContent = '';
+  }
+}
+
 // 建築卡牌生成
 function createBuildingCard(info){
   const card = document.createElement('div');
@@ -564,6 +587,7 @@ function startDrawPhase(){
   updateRefreshButton();
   document.getElementById('draw-section').style.display='flex';
   drawCards();
+  updateStageBar();
 }
 
 // window.onload 初始化
@@ -603,6 +627,7 @@ window.onload = () => {
   // 初始顯示
   updateRoundDisplay();
   updateResourceDisplay();
+  updateStageBar();
 
   // 事件
   startBtn.onclick = ()=>{ startScreen.style.display='none'; startDrawPhase(); };
