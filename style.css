@@ -264,3 +264,17 @@ body {
   border-radius: 8px;
   text-align: center;
 }
+
+/* 撤銷按鈕 */
+#undo-btn {
+  margin-right: 10px;
+  padding: 8px 12px;
+  background: #eee;
+  border: 1px solid #333;
+  border-radius: 4px;
+  cursor: pointer;
+}
+#undo-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
