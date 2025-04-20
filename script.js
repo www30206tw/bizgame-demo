@@ -217,8 +217,6 @@ function initMapArea(){
     // 2. 標籤能力
     const labelPopup = document.createElement('div');
     labelPopup.className = 'hcover hcover-popup';
-    labelPopup.style.top  = `${rect.top}px`;
-    labelPopup.style.left = `${rect.right + 160}px`;
     labelPopup.style.display = 'block';
     labelPopup.innerText = `${tileData.buildingLabel}：${labelEffectDesc[tileData.buildingLabel]}`;
     document.body.appendChild(labelPopup);
@@ -227,19 +225,34 @@ function initMapArea(){
    const tilePopup = document.createElement('div');
    tilePopup.className = 'hcover hcover-popup';
    tilePopup.innerText = `地塊效果：${tileEffectDesc[tileData.type]}`;
-   tilePopup.style.top  = `${rect.top + 40}px`;
-   tilePopup.style.left = `${rect.right + 85}px`;
    tilePopup.style.display = 'block';
    document.body.appendChild(tilePopup);
 
     // 3. 本回合產出
     const producePopup = document.createElement('div');
     producePopup.className = 'hcover hcover-popup';
-    producePopup.style.top  = `${rect.top + 75}px`;
-    producePopup.style.left = `${rect.right + 160}px`;
     producePopup.style.display = 'block';
     producePopup.innerText = `本回合產出：${tileData.buildingProduce}`;
     document.body.appendChild(producePopup);
+
+    // —— 統一排列三個彈框 ——
+   // 水平偏移統一
+   const offsetX = rect.right + 140;
+
+   // 2. 標籤能力（頂端對齊）
+   labelPopup.style.top    = `${rect.top}px`;
+   labelPopup.style.left   = `${offsetX}px`;
+   labelPopup.style.display= 'block';
+
+   // 2.5 地塊效果（標籤下方 10px）
+   tilePopup.style.top     = `${rect.top + labelPopup.offsetHeight + 10}px`;
+   tilePopup.style.left    = `${offsetX}px`;
+   tilePopup.style.display = 'block';
+
+   // 3. 本回合產出（再下方 10px）
+   producePopup.style.top    = `${rect.top + labelPopup.offsetHeight + tilePopup.offsetHeight + 20}px`;
+   producePopup.style.left   = `${offsetX}px`;
+   producePopup.style.display= 'block';
    }
   });
 
