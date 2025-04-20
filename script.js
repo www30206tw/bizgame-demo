@@ -79,6 +79,39 @@ const paymentSchedule = { 5:180, 10:640, 16:1450 };
 let tileMap = [];
 
 // 工具函式
+
+// 顯示「遊戲結束」畫面
+function showEndScreen(msg) {
+  document.getElementById('end-title').innerText = msg;
+  document.getElementById('end-screen').style.display = 'flex';
+}
+
+// 重置所有狀態並重新開始
+function restartGame() {
+  // 重設遊戲變數
+  currentRound = 1;
+  currentGold = 0;
+  roundRevenue = 0;
+  refreshCount = 0;
+  warningNextRoundShown = false;
+  lastPlacement = null;
+
+  // 重建地圖與手牌
+  tileMap = createTileMap31();
+  computeAdj();
+  initMapArea();
+  document.getElementById('hand').innerHTML = '手牌（建築）';
+
+  // 更新 UI
+  updateRoundDisplay();
+  updateResourceDisplay();
+  updateStageBar();
+
+  // 隱藏結束畫面，進入抽卡
+  document.getElementById('end-screen').style.display = 'none';
+  startDrawPhase();
+}
+
 function shuffle(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -677,8 +710,14 @@ window.onload = () => {
   if (paymentSchedule[currentRound]) {
       const cost = paymentSchedule[currentRound];
       if (currentGold < cost) {
-        alert('下一把會更好｜>_<｜');
-        return; // 停止遊戲
+        // 根據當前回合顯示不同的失敗訊息
+      let msg = '';
+      if (currentRound === 5)      msg = '至少也要付一點錢吧●–●!';
+      else if (currentRound === 10) msg = '下一把會更好>_<';
+      else if (currentRound === 16) msg = '就差一點了，下一把會更好!!~~';
+      else                          msg = '遊戲結束';
+      showEndScreen(msg);
+      return;
       }
       // 扣款
       currentGold -= cost;
@@ -687,7 +726,7 @@ window.onload = () => {
       showModal('成功支付金幣!');
       // 第16回合支付後即勝利
       if (currentRound === 16) {
-        alert('遊戲勝利');
+        showEndScreen('遊戲勝利!!');
         return;
       }
     }
@@ -700,6 +739,16 @@ window.onload = () => {
   document.getElementById('undo-btn').disabled = true;
   startDrawPhase();
 };
+
+  // 監聽「重新開始」按鈕
+  document.getElementById('restartBtn').onclick = restartGame;
+  // 監聽 Enter 鍵重啟（只在 end-screen 顯示時觸發）
+  document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('end-screen').style.display === 'flex') {
+    restartGame();
+  }
+});
+  
   document.getElementById('refresh-btn').onclick = refreshCards;
   infoBtn.onclick     = ()=>infoModal.style.display='flex';
   closeInfoBtn.onclick= ()=>infoModal.style.display='none';
