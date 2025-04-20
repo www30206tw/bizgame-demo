@@ -208,37 +208,6 @@ body {
   cursor: pointer;
 }
 
-/* 說明彈窗 */
-.info-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(10,10,10,0.6);
-  display: none;
-  justify-content: center;
-  align-items: center;
-  z-index: 1001;
-}
-.info-content {
-  background: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  color: #333;
-  max-width: 300px;
-  width: 80%;
-  text-align: left;
-  position: relative;
-}
-.info-content h2 {
-  margin-top: 0;
-}
-.info-content ul {
-  list-style: none;
-  padding: 0;
-}
-
  .hcover {
    position: absolute;
    display: none;
