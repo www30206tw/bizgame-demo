@@ -48,6 +48,14 @@ const labelEffectDesc = {
   "荒原":"非荒原地塊50%機率不產出"
 };
 
+// 在 labelEffectDesc 之後，加入
+const tileEffectDesc = {
+  city:      '所有建築產出 +2',
+  slum:      '若 3 塊（含）以上相連且都有建築，則各額外 +1',
+  river:     '建築產出 −1',
+  wasteland: '無效果'
+};
+
 const directionsEven = [
   {dr:-1,dc:0},{dr:-1,dc:1},{dr:0,dc:-1},
   {dr:0,dc:1},{dr:1,dc:0},{dr:1,dc:1}
@@ -177,7 +185,9 @@ function initMapArea(){
     // —— 空地：中英地塊名稱 —— 
     const popup = document.createElement('div');
     popup.className = 'hcover hcover-popup';
-    popup.innerText = `地塊類型：${tileData.type}（${tileTypeNames[tileData.type]}）`;
+    popup.innerHTML =
+    `地塊類型：${tileData.type}（${tileTypeNames[tileData.type]}）<br>` +
+    `地塊效果：${tileEffectDesc[tileData.type]}`;
     popup.style.top  = `${rect.top}px`;
     popup.style.left = `${rect.right + 5}px`;
     popup.style.display = 'block';
@@ -212,6 +222,15 @@ function initMapArea(){
     labelPopup.style.display = 'block';
     labelPopup.innerText = `${tileData.buildingLabel}：${labelEffectDesc[tileData.buildingLabel]}`;
     document.body.appendChild(labelPopup);
+
+    // 2.5地塊能力
+   const tilePopup = document.createElement('div');
+   tilePopup.className = 'hcover hcover-popup';
+   tilePopup.innerText = `地塊效果：${tileEffectDesc[tileData.type]}`;
+   tilePopup.style.top  = `${rect.top + 40}px`;
+   tilePopup.style.left = `${rect.right + 85}px`;
+   tilePopup.style.display = 'block';
+   document.body.appendChild(tilePopup);
 
     // 3. 本回合產出
     const producePopup = document.createElement('div');
