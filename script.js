@@ -39,16 +39,12 @@ const cardPoolData = [
   { name:'灣岸輸能站', rarity:'普通', baseProduce:6, label:'河流', specialAbility:'若沒有位於河流，每回合產出-1' ,type:'building' },
   { name:'垂直農倉',   rarity:'稀有', baseProduce:6, label:'貧民窟', specialAbility:'每有 1 座垂直農倉相鄰，產出 +1（最多 +2）' ,type:'building' },
   { name:'通訊樞紐',   rarity:'稀有', baseProduce:6, label:'荒原',   specialAbility:'此建築可同時視為擁有所有地塊 tag，能觸發所有地塊 tag 效果（不改變地塊本身）' ,type:'building' },
-  { name:'科技A', rarity:'普通', baseProduce:0, specialAbility:'' ,type:'tech', },
-  { name:'科技B', rarity:'稀有', baseProduce:0, specialAbility:'' ,type:'tech' },
   { name:'廢物利用', rarity:'普通', baseProduce:0, specialAbility:'荒原地塊能力的產出額外 +1 金幣', type:'tech' },
   { name:'地價升值', rarity:'稀有', baseProduce:0, specialAbility:'繁華區地塊能力的產出額外 +2 金幣', type:'tech' },
 ];
 
 // ─ 新增：科技卡定義與已用次數 ─
 const techDefinitions = {
-  '科技A': { rarity:'普通', description:'能力範例A', count:0, max:5 },
-  '科技B': { rarity:'稀有', description:'能力範例B', count:0, max:5 },
   '廢物利用': { rarity:'普通', description:'荒原地塊能力的產出額外', perLevel:1, count:0, max:5 },
   '地價升值': { rarity:'稀有', description:'繁華區地塊能力的產出額外', perLevel:2, count:0, max:5 }
 };
