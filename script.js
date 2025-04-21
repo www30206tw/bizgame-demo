@@ -360,11 +360,12 @@ function initMapArea(){
    tilePopup.style.display = 'block';
 
   // 4. 科技加成（地塊能力下方 10px）
-   techBonusPopup.style.top   = `${rect.top + labelPopup.offsetHeight + tilePopup.offsetHeight + 20}px`;
+   techBonusPopup.style.top   = `${rect.top + labelPopup.offsetHeight + tilePopup.offsetHeight + 25}px`;
    techBonusPopup.style.left  = `${offsetX}px`;
+   techBonusPopup.style.display = 'block';
 
    // 5. 本回合產出（再下方 10px）
-   producePopup.style.top    = `${rect.top + labelPopup.offsetHeight + tilePopup.offsetHeight + 30}px`;
+   producePopup.style.top    = `${rect.top + labelPopup.offsetHeight + tilePopup.offsetHeight + 40}px`;
    producePopup.style.left   = `${offsetX}px`;
    producePopup.style.display= 'block';
    }
