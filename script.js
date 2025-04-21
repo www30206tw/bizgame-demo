@@ -154,6 +154,25 @@ function drawOneCard(typeConstraint, rarity, excludedSet) {
     // 排除：科技卡已使用達上限
     && !(c.type==='tech' && techDefinitions[c.name].count >= techDefinitions[c.name].max)                               
   );
+  // ── 新增：如果 pool 為空，fallback 回建築卡池，或最終隨機一張 ──
+   if (pool.length === 0) {
+     // 優先從相同稀有度的建築卡裡抽
+     const fallback = cardPoolData.filter(c =>
+       c.rarity === rarity &&
+       c.type === 'building' &&
+       !excludedSet.has(c.name)
+     );
+     if (fallback.length > 0) {
+       const pick2 = fallback[Math.floor(Math.random() * fallback.length)];
+       excludedSet.add(pick2.name);
+       return pick2;
+     }
+     // 若還是空，再從所有未抽過的卡隨機取一張
+     const anyPool = cardPoolData.filter(c => !excludedSet.has(c.name));
+     const pick3 = anyPool[Math.floor(Math.random() * anyPool.length)];
+     excludedSet.add(pick3.name);
+     return pick3;
+   }
   const pick = pool[Math.floor(Math.random() * pool.length)];
   excludedSet.add(pick.name);
   return pick;
@@ -773,9 +792,6 @@ window.onload = () => {
   lastPlacement = null;
   undoBtn.disabled = true;
   };
-  const infoBtn     = document.getElementById('info-btn');
-  const infoModal   = document.getElementById('info-modal');
-  const closeInfoBtn= document.getElementById('close-info-btn');
 
   // 建立並渲染地圖
   tileMap = createTileMap31();
@@ -846,6 +862,4 @@ window.onload = () => {
 });
   
   document.getElementById('refresh-btn').onclick = refreshCards;
-  infoBtn.onclick     = ()=>infoModal.style.display='flex';
-  closeInfoBtn.onclick= ()=>infoModal.style.display='none';
 };
