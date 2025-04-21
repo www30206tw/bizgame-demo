@@ -756,12 +756,14 @@ function recalcRevenueFromScratch(){
     // 先拿原本計算好的建築產出
     let val = t.buildingProduce;
     // 「廢物利用」：荒原地塊每等級 + perLevel 金幣
+    // 「地價升值」：僅對繁華區地塊，每等級 + perLevel 金幣
     const wuluDef = techDefinitions['廢物利用'];
+    const dijiaDef = techDefinitions['地價升值'];
+    
     if (wuluDef && t.type === 'wasteland') {
     val += wuluDef.perLevel * wuluDef.count;
     }
-    // 「地價升值」：僅對繁華區地塊，每等級 + perLevel 金幣
-    const dijiaDef = techDefinitions['地價升值'];
+    
     if (dijiaDef && t.type === 'city') {
     val += dijiaDef.perLevel * dijiaDef.count;
     }
