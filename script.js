@@ -327,6 +327,7 @@ function initMapArea(){
     const techBonusPopup = document.createElement('div');
     techBonusPopup.className = 'hcover hcover-popup';
     techBonusPopup.style.display = 'block';
+    techBonusPopup.style.zIndex = '1001';
     // 計算「廢物利用」與「地價升值」對這格的加成
     const wulu = techDefinitions['廢物利用'];
     const dijia = techDefinitions['地價升值'];
