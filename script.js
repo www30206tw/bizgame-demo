@@ -43,6 +43,12 @@ const cardPoolData = [
   { name:'科技B', rarity:'稀有', baseProduce:0, specialAbility:'' ,type:'tech' }
 ];
 
+// ─ 新增：科技卡定義與已用次數 ─
+const techDefinitions = {
+  '科技A': { rarity:'普通', description:'能力範例A', count:0, max:5 },
+  '科技B': { rarity:'稀有', description:'能力範例B', count:0, max:5 }
+};
+
 const labelEffectDesc = {
   "繁華區":"蓋在繁華區時+4",
   "貧民窟":"相鄰貧民窟建築每座+1",
@@ -145,6 +151,8 @@ function drawOneCard(typeConstraint, rarity, excludedSet) {
     c.rarity === rarity &&
     (typeConstraint === 'either' || c.type === typeConstraint) &&
     !excludedSet.has(c.name)
+    // 排除：科技卡已使用達上限
+    && !(c.type==='tech' && techDefinitions[c.name].count >= techDefinitions[c.name].max)                               
   );
   const pick = pool[Math.floor(Math.random() * pool.length)];
   excludedSet.add(pick.name);
@@ -366,6 +374,8 @@ function updateStageBar() {
 // 建築卡牌生成
 function createBuildingCard(info){
   const card = document.createElement('div');
+  // 新增：記錄卡片類型 (building 或 tech)
+  card.dataset.type = info.type;
   card.className = 'card';
   card.dataset.produce = info.baseProduce;
   card.dataset.cardId = ++cardIdCounter;
@@ -487,20 +497,34 @@ function confirmDraw(){
   if (selected.length !== 2) {
     alert('請選擇兩張卡！');
     return;}
-  const hand = document.getElementById('hand');
+   const hand = document.getElementById('hand');
   selected.forEach(c => {
-    const info = {
-      name: c.querySelector('.card-name').innerText,
-      rarity: c.querySelector('.card-rarity').innerText,
-      label: c.dataset.label,
-      specialAbility: c.querySelector('.card-ability')?.innerText||'',
-      baseProduce: parseInt(c.dataset.produce)
-    };
-    const nc = createBuildingCard(info);
-    hand.appendChild(nc);
+    const name = c.querySelector('.card-name').innerText;
+    const type = c.dataset.type;
+    if (type === 'tech') {
+      // 使用科技卡：計數 +1，更新科技樹
+      techDefinitions[name].count = Math.min(
+        techDefinitions[name].count + 1,
+        techDefinitions[name].max
+      );
+      updateTechTree();
+    } else {
+      // 建築卡 → 加入手牌
+      const info = {
+        name,
+        rarity: c.querySelector('.card-rarity').innerText,
+        label: c.dataset.label,
+        specialAbility: c.querySelector('.card-ability')?.innerText||'',
+        baseProduce: parseInt(c.dataset.produce),
+        type: 'building'      // 必帶
+      };
+      const nc = createBuildingCard(info);
+      hand.appendChild(nc);
+    }
     c.classList.remove('selected');
   });
-  document.getElementById('draw-section').style.display='none';
+  // 關閉抽卡視窗
+  document.getElementById('draw-section').style.display = 'none';
 }
 
 // 地圖放牌
@@ -704,6 +728,26 @@ function startDrawPhase(){
   updateStageBar();
 }
 
+// 顯示科技樹 Modal
+function showTechModal() {
+  updateTechTree();
+  document.getElementById('tech-modal').style.display = 'flex';
+}
+// 關閉科技樹 Modal
+function hideTechModal() {
+  document.getElementById('tech-modal').style.display = 'none';
+}
+// 更新科技樹內容
+function updateTechTree() {
+  const ul = document.getElementById('tech-list');
+  ul.innerHTML = '';
+  for (const [name, def] of Object.entries(techDefinitions)) {
+    const li = document.createElement('li');
+    li.innerText = `${name}：${def.description}  ${def.count}/${def.max}`;
+    ul.appendChild(li);
+  }
+}
+
 // window.onload 初始化
 window.onload = () => {
   // DOM 參考
@@ -751,6 +795,9 @@ window.onload = () => {
       startDrawPhase();
     }
   });
+  // ─ 綁定科技樹 Modal 開關 ─
+  document.getElementById('tech-button').onclick    = showTechModal;
+  document.getElementById('close-tech-btn').onclick = hideTechModal;
   endTurnBtn.onclick = () => {
   // 1. 計算本回合實際入帳並累加
   currentGold += computeEffectiveRevenue();
