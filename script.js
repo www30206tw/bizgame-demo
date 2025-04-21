@@ -323,11 +323,19 @@ function initMapArea(){
    tilePopup.style.display = 'block';
    document.body.appendChild(tilePopup);
 
-    // 3. 本回合產出
+    // 3. 本回合產出（含科技加成）
     const producePopup = document.createElement('div');
     producePopup.className = 'hcover hcover-popup';
     producePopup.style.display = 'block';
-    producePopup.innerText = `本回合產出：${tileData.buildingProduce}`;
+    // 取出兩個科技定義
+    const wulu = techDefinitions['廢物利用'];
+    const dijia = techDefinitions['地價升值'];
+    // 計算科技在此地塊上的額外加成
+    const bonusWulu = tileData.type === 'wasteland' ? wulu.perLevel * wulu.count : 0;
+    const bonusDijia = tileData.type === 'city'     ? dijia.perLevel * dijia.count : 0;
+    // 最終產出 = 原本 buildingProduce + 科技加成
+    const finalProduce = tileData.buildingProduce + bonusWulu + bonusDijia;
+    producePopup.innerText = `本回合產出：${finalProduce}`;
     document.body.appendChild(producePopup);
 
     // —— 統一排列三個彈框 ——
@@ -540,6 +548,8 @@ function confirmDraw(){
         techDefinitions[name].max
       );
       updateTechTree();
+      // 新增：科技用完後重算本回合產出並更新顯示
+      recalcRevenueFromScratch();
     } else {
       // 建築卡 → 加入手牌
       const info = {
