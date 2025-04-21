@@ -262,3 +262,15 @@ body {
 #tech-list li {
   margin-bottom: 5px;
 }
+
+/* 卡牌底部的類型標示 */
+.card .card-type {
+  position: absolute;
+  bottom: 5px;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 14px;
+  font-weight: bold;
+  color: #333;
+}
