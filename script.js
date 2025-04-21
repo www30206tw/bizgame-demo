@@ -23,22 +23,24 @@ const typeMapping = {
 };
 
 const cardPoolData = [
-  { name:'淨水站', rarity:'普通', label:'河流',     baseProduce:4, specialAbility:'回合結束時，有50%機率產出額外+1' },
-  { name:'星軌會館', rarity:'稀有', label:'繁華區',  baseProduce:6, specialAbility:'沒有任何建築相臨時，產出額外+2' },
-  { name:'摩天坊', rarity:'普通', label:'繁華區', baseProduce:5 },
-  { name:'集貧居', rarity:'普通', label:'貧民窟', baseProduce:4 },
-  { name:'廢土站', rarity:'普通', label:'荒原',   baseProduce:3 },
-  { name:'廢材棚', rarity:'普通', label:'荒原',   baseProduce:4 },
-  { name:'社群站', rarity:'普通', label:'貧民窟', baseProduce:4, specialAbility:'當有任何建築相臨時，產出額外+1' },
-  { name:'彈出商亭', rarity:'普通', label:'繁華區', baseProduce:5, specialAbility:'當位於任何邊緣地塊時，產出額外+1' },
-  { name:'地脈節點', rarity:'普通', label:'荒原', baseProduce:6, specialAbility:'當剛好有兩個建築相臨時，產出額外+1' },
-  { name:'匯聚平臺', rarity:'稀有', label:'貧民窟', baseProduce:5, specialAbility:'當相鄰的建築超過2個時，產出額外+2' },
-  { name:'流動站',   rarity:'稀有', label:'河流',   baseProduce:5, specialAbility:'若相鄰的建築位於河流地塊上，該建築產出額外+1' },
-  { name:'焚料方艙', rarity:'稀有', label:'荒原',   baseProduce:8, specialAbility:'若本回合為偶數回合，產出永久−1，最多永久減少4' },
-  { name:'廉租居',     rarity:'普通', baseProduce:3, label:'貧民窟' },
-  { name:'灣岸輸能站', rarity:'普通', baseProduce:6, label:'河流', specialAbility:'若沒有位於河流，每回合產出-1' },
-  { name:'垂直農倉',   rarity:'稀有', baseProduce:6, label:'貧民窟', specialAbility:'每有 1 座垂直農倉相鄰，產出 +1（最多 +2）' },
-  { name:'通訊樞紐',   rarity:'稀有', baseProduce:6, label:'荒原',   specialAbility:'此建築可同時視為擁有所有地塊 tag，能觸發所有地塊 tag 效果（不改變地塊本身）' }
+  { name:'淨水站', rarity:'普通', label:'河流',     baseProduce:4, specialAbility:'回合結束時，有50%機率產出額外+1' ,type:'building' },
+  { name:'星軌會館', rarity:'稀有', label:'繁華區',  baseProduce:6, specialAbility:'沒有任何建築相臨時，產出額外+2' ,type:'building' },
+  { name:'摩天坊', rarity:'普通', label:'繁華區', baseProduce:5 ,type:'building' },
+  { name:'集貧居', rarity:'普通', label:'貧民窟', baseProduce:4 ,type:'building' },
+  { name:'廢土站', rarity:'普通', label:'荒原',   baseProduce:3 ,type:'building' },
+  { name:'廢材棚', rarity:'普通', label:'荒原',   baseProduce:4 ,type:'building' },
+  { name:'社群站', rarity:'普通', label:'貧民窟', baseProduce:4, specialAbility:'當有任何建築相臨時，產出額外+1' ,type:'building' },
+  { name:'彈出商亭', rarity:'普通', label:'繁華區', baseProduce:5, specialAbility:'當位於任何邊緣地塊時，產出額外+1' ,type:'building' },
+  { name:'地脈節點', rarity:'普通', label:'荒原', baseProduce:6, specialAbility:'當剛好有兩個建築相臨時，產出額外+1' ,type:'building' },
+  { name:'匯聚平臺', rarity:'稀有', label:'貧民窟', baseProduce:5, specialAbility:'當相鄰的建築超過2個時，產出額外+2' ,type:'building' },
+  { name:'流動站',   rarity:'稀有', label:'河流',   baseProduce:5, specialAbility:'若相鄰的建築位於河流地塊上，該建築產出額外+1' ,type:'building' },
+  { name:'焚料方艙', rarity:'稀有', label:'荒原',   baseProduce:8, specialAbility:'若本回合為偶數回合，產出永久−1，最多永久減少4' ,type:'building' },
+  { name:'廉租居',     rarity:'普通', baseProduce:3, label:'貧民窟' ,type:'building' },
+  { name:'灣岸輸能站', rarity:'普通', baseProduce:6, label:'河流', specialAbility:'若沒有位於河流，每回合產出-1' ,type:'building' },
+  { name:'垂直農倉',   rarity:'稀有', baseProduce:6, label:'貧民窟', specialAbility:'每有 1 座垂直農倉相鄰，產出 +1（最多 +2）' ,type:'building' },
+  { name:'通訊樞紐',   rarity:'稀有', baseProduce:6, label:'荒原',   specialAbility:'此建築可同時視為擁有所有地塊 tag，能觸發所有地塊 tag 效果（不改變地塊本身）' ,type:'building' },
+  { name:'科技A', rarity:'普通', baseProduce:0, specialAbility:'' ,type:'tech', },
+  { name:'科技B', rarity:'稀有', baseProduce:0, specialAbility:'' ,type:'tech' }
 ];
 
 const labelEffectDesc = {
@@ -118,6 +120,35 @@ function shuffle(arr) {
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
+}
+
+//根據回合回傳各稀有度的權重。
+function getRarityDistribution(round) {
+  if (round <= 5)   return { 普通: 1.0, 稀有: 0.0 };
+  if (round <= 10)  return { 普通: 0.85, 稀有: 0.15 };
+                     return { 普通: 0.75, 稀有: 0.25 };
+}
+
+//從一個 {key: weight, …} 物件隨機選一個 key。
+function weightedRandomKey(dist) {
+  const sum = Object.values(dist).reduce((a,b)=>a+b, 0);
+  let r = Math.random() * sum;
+  for (const [k,w] of Object.entries(dist)) {
+    if (r < w) return k;
+    r -= w;
+  }
+}
+  
+//從 cardPoolData 抽一張符合「typeConstraint」與「rarity」，且不在 excludedSet 裡的卡。
+function drawOneCard(typeConstraint, rarity, excludedSet) {
+  const pool = cardPoolData.filter(c =>
+    c.rarity === rarity &&
+    (typeConstraint === 'either' || c.type === typeConstraint) &&
+    !excludedSet.has(c.name)
+  );
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  excludedSet.add(pick.name);
+  return pick;
 }
 
 // 建立地圖資料
@@ -412,10 +443,28 @@ function createBuildingCard(info){
 
 // 抽牌階段
 function drawCards(){
-  const pool = document.getElementById('card-pool');
-  pool.innerHTML = '';
-  shuffle(cardPoolData.slice()).slice(0,5).forEach(info => {
-    pool.appendChild(createBuildingCard(info));
+  const poolEl = document.getElementById('card-pool');
+  poolEl.innerHTML = '';
+  
+  const pickedNames = new Set();
+  const cards = [];
+  const probs = getRarityDistribution(currentRound);
+  
+  // 前 3 張：固定 type = 'building'
+  for (let i = 0; i < 3; i++) {
+    const rarity = weightedRandomKey(probs);
+    cards.push(drawOneCard('building', rarity, pickedNames));
+  }
+  // 後 2 張：type 50% building / 50% tech
+  for (let i = 0; i < 2; i++) {
+    const rarity = weightedRandomKey(probs);
+    const typeCt = Math.random() < 0.5 ? 'building' : 'tech';
+    cards.push(drawOneCard(typeCt, rarity, pickedNames));
+  }
+  
+  // 將選到的 5 張卡渲染到畫面
+  cards.forEach(info => {
+    poolEl.appendChild(createBuildingCard(info));
   });
 }
 
