@@ -781,15 +781,30 @@ document.getElementById('warning-close-btn').onclick = () => {
   document.getElementById('warning-modal').style.display = 'none';
 };
 
-// 輔助：計算實際入帳（含荒原50%失敗）
+// 輔助：計算實際入帳（含荒原50%機率不產出 & 科技加成）
 function computeEffectiveRevenue(){
-  let eff=0;
-  tileMap.forEach(t=>{
-    if(!t.buildingPlaced) return;
+  let eff = 0;
+  const wuluDef  = techDefinitions['廢物利用'];
+  const dijiaDef = techDefinitions['地價升值'];
+
+  tileMap.forEach(t => {
+    if (!t.buildingPlaced) return;
+    // 1. 基础产出
     let v = t.buildingProduce;
-    if(t.buildingLabel==='荒原'&&t.type!=='wasteland'&&Math.random()<0.5) v=0;
+    // 2. 科技加成
+    if (wuluDef && t.type === 'wasteland') {
+      v += wuluDef.perLevel * wuluDef.count;
+    }
+    if (dijiaDef && t.type === 'city') {
+      v += dijiaDef.perLevel * dijiaDef.count;
+    }
+    // 3. 荒原随机失效（50%几率不产出）
+    if (t.type === 'wasteland' && Math.random() < 0.5) {
+      v = 0;
+    }
     eff += v;
   });
+
   return eff;
 }
 
