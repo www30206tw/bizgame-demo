@@ -336,18 +336,12 @@ function initMapArea(){
     techBonusPopup.innerText = `科技加成：${techBonus}`;
     document.body.appendChild(techBonusPopup);
 
-    // 5. 本回合產出（含科技加成）
+    // 5. 本回合產出（含剛才算出的 techBonus）
     const producePopup = document.createElement('div');
     producePopup.className = 'hcover hcover-popup';
     producePopup.style.display = 'block';
-    // 取出兩個科技定義
-    const wulu = techDefinitions['廢物利用'];
-    const dijia = techDefinitions['地價升值'];
-    // 計算科技在此地塊上的額外加成
-    const bonusWulu = tileData.type === 'wasteland' ? wulu.perLevel * wulu.count : 0;
-    const bonusDijia = tileData.type === 'city'     ? dijia.perLevel * dijia.count : 0;
-    // 最終產出 = 原本 buildingProduce + 科技加成
-    const finalProduce = tileData.buildingProduce + bonusWulu + bonusDijia;
+    // 直接套用之前算好的 techBonus
+    const finalProduce = tileData.buildingProduce + techBonus;
     producePopup.innerText = `本回合產出：${finalProduce}`;
     document.body.appendChild(producePopup);
 
