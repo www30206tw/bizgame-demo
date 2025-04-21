@@ -860,7 +860,7 @@ window.onload = () => {
       let msg = '';
       if (currentRound === 5)      msg = '至少也要付一點錢吧●–●!';
       else if (currentRound === 10) msg = '下一把會更好>_<';
-      else if (currentRound === 16) msg = '就差一點了，下一把會更好!!~~';
+      else if (currentRound === 16) msg = '就差一點了，再努力一下 O口O';
       else                          msg = '遊戲結束';
       showEndScreen(msg);
       return;
