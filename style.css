@@ -249,3 +249,16 @@ body {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* 科技樹 Modal 版型 */
+#tech-modal .warning-content {
+  width: 300px;
+}
+#tech-list {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+}
+#tech-list li {
+  margin-bottom: 5px;
+}
