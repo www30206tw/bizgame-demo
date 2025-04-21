@@ -404,15 +404,24 @@ function createBuildingCard(info){
   card.dataset.cardId = ++cardIdCounter;
   card.dataset.label = info.label;
   card.innerHTML = `
-    <div class="card-gold-output">${info.baseProduce}</div>
+    ${info.type === 'building'
+     ? `<div class="card-gold-output">${info.baseProduce}</div>` 
+     : ''}
     <div class="card-image-area"></div>
     <div class="card-name">${info.name}</div>
     <div class="card-rarity">${info.rarity}</div>
-    <div class="card-label">${info.label}</div>
+    ${info.type === 'building'
+     ? `<div class="card-label">${info.label}</div>`
+     : ''}
     <div class="card-ability">${info.specialAbility||''}</div>
-    <div class="tooltip">
-      ${info.label}：${labelEffectDesc[info.label]||''}
-    </div>`;
+   ${info.type === 'building'
+     ? `<div class="tooltip">
+         ${info.label}：${labelEffectDesc[info.label]||''}
+       </div>`
+     : ''}
+   <!-- 新增：卡牌類型標示 -->
+   <div class="card-type">${info.type === 'tech' ? '科技' : '建築'}</div>`;
+  
   // 點選選牌
   card.onclick = () => {
     const pool = document.getElementById('card-pool');
