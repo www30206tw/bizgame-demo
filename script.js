@@ -327,7 +327,6 @@ function initMapArea(){
     const techBonusPopup = document.createElement('div');
     techBonusPopup.className = 'hcover hcover-popup';
     techBonusPopup.style.display = 'block';
-    techBonusPopup.style.zIndex = '1001';
     // 計算「廢物利用」與「地價升值」對這格的加成
     const wulu = techDefinitions['廢物利用'];
     const dijia = techDefinitions['地價升值'];
@@ -349,27 +348,32 @@ function initMapArea(){
     // —— 統一排列三個彈框 ——
    // 水平偏移統一
    const offsetX = rect.right + 140;
+   const spacing = 10;                    // 每個 popup 間距
+   let currentTop = rect.top;             // 起始高度
 
-   // 2. 標籤能力（頂端對齊）
-   labelPopup.style.top    = `${rect.top}px`;
+   // 2. 標籤能力
+   labelPopup.style.top    = `${currentTop}px`;
    labelPopup.style.left   = `${offsetX}px`;
    labelPopup.style.display= 'block';
+   currentTop += labelPopup.offsetHeight + spacing;
 
-   // 3. 地塊效果（標籤下方 10px）
-   tilePopup.style.top     = `${rect.top + labelPopup.offsetHeight + 10}px`;
+   // 3. 地塊效果
+   tilePopup.style.top     = `${currentTop}px`;
    tilePopup.style.left    = `${offsetX}px`;
    tilePopup.style.display = 'block';
+   currentTop += tilePopup.offsetHeight + spacing;
 
-  // 4. 科技加成（地塊能力下方 10px）
-   techBonusPopup.style.top   = `${rect.top + labelPopup.offsetHeight + tilePopup.offsetHeight + 25}px`;
-   techBonusPopup.style.left  = `${offsetX}px`;
-   techBonusPopup.style.display = 'block';
+   // 4. 科技加成
+   techBonusPopup.style.top    = `${currentTop}px`;
+   techBonusPopup.style.left   = `${offsetX}px`;
+   techBonusPopup.style.display= 'block';
+   currentTop += techBonusPopup.offsetHeight + spacing;
 
-   // 5. 本回合產出（再下方 10px）
-   producePopup.style.top    = `${rect.top + labelPopup.offsetHeight + tilePopup.offsetHeight + 40}px`;
+   // 5. 本回合產出
+   producePopup.style.top    = `${currentTop}px`;
    producePopup.style.left   = `${offsetX}px`;
    producePopup.style.display= 'block';
-   }
+     }
   });
 
     // 滑鼠移出：隱藏懸浮窗
