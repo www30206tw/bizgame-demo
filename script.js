@@ -722,19 +722,24 @@ function recalcRevenueFromScratch(){
     if (t.type === 'river') t.buildingProduce += 3;
     // 荒原標籤的「50% 機率不產出」會在 computeEffectiveRevenue() 階段自動套用
   }
-  // 套用「廢物利用」：每張荒原地塊上建築額外 +1 金幣
-  const wulu = techDefinitions['廢物利用']?.count || 0;
-  if (wulu > 0 && t.buildingPlaced && t.type === 'wasteland') {
-    t.buildingProduce += wulu;
-  }
-  // 套用「地價升值」：每張繁華區地塊上建築額外 +2 金幣
-  const dijia = techDefinitions['地價升值']?.count || 0;
-  if (dijia > 0 && t.buildingPlaced && t.type === 'city') {
-    t.buildingProduce += dijia * 2;
-  }
   });
   // 5. 累加
-  tileMap.forEach(t=>{ if(t.buildingPlaced) total+=t.buildingProduce; });
+  tileMap.forEach(t => {
+    if (!t.buildingPlaced) return;
+    // 先拿原本計算好的建築產出
+    let val = t.buildingProduce;
+    // 「廢物利用」：荒原地塊每等級 + perLevel 金幣
+    const wuluDef = techDefinitions['廢物利用'];
+    if (wuluDef) {
+      val += wuluDef.perLevel * wuluDef.count;
+    }
+    // 「地價升值」：繁華區地塊每等級 + perLevel 金幣
+    const dijiaDef = techDefinitions['地價升值'];
+    if (dijiaDef) {
+      val += dijiaDef.perLevel * dijiaDef.count;
+    }
+    total += val;
+  });
   roundRevenue = total;
   updateResourceDisplay();
 }
