@@ -40,13 +40,17 @@ const cardPoolData = [
   { name:'垂直農倉',   rarity:'稀有', baseProduce:6, label:'貧民窟', specialAbility:'每有 1 座垂直農倉相鄰，產出 +1（最多 +2）' ,type:'building' },
   { name:'通訊樞紐',   rarity:'稀有', baseProduce:6, label:'荒原',   specialAbility:'此建築可同時視為擁有所有地塊 tag，能觸發所有地塊 tag 效果（不改變地塊本身）' ,type:'building' },
   { name:'科技A', rarity:'普通', baseProduce:0, specialAbility:'' ,type:'tech', },
-  { name:'科技B', rarity:'稀有', baseProduce:0, specialAbility:'' ,type:'tech' }
+  { name:'科技B', rarity:'稀有', baseProduce:0, specialAbility:'' ,type:'tech' },
+  { name:'廢物利用', rarity:'普通', baseProduce:0, specialAbility:'荒原地塊能力的產出額外 +1 金幣', type:'tech' },
+  { name:'地價升值', rarity:'稀有', baseProduce:0, specialAbility:'繁華區地塊能力的產出額外 +2 金幣', type:'tech' },
 ];
 
 // ─ 新增：科技卡定義與已用次數 ─
 const techDefinitions = {
   '科技A': { rarity:'普通', description:'能力範例A', count:0, max:5 },
-  '科技B': { rarity:'稀有', description:'能力範例B', count:0, max:5 }
+  '科技B': { rarity:'稀有', description:'能力範例B', count:0, max:5 },
+  '廢物利用': { rarity:'普通', description:'荒原地塊能力的產出額外', perLevel:1, count:0, max:5 },
+  '地價升值': { rarity:'稀有', description:'繁華區地塊能力的產出額外', perLevel:2, count:0, max:5 }
 };
 
 const labelEffectDesc = {
@@ -713,6 +717,16 @@ function recalcRevenueFromScratch(){
     if (t.type === 'river') t.buildingProduce += 3;
     // 荒原標籤的「50% 機率不產出」會在 computeEffectiveRevenue() 階段自動套用
   }
+  // 套用「廢物利用」：每張荒原地塊上建築額外 +1 金幣
+  const wulu = techDefinitions['廢物利用']?.count || 0;
+  if (wulu > 0 && t.buildingPlaced && t.type === 'wasteland') {
+    t.buildingProduce += wulu;
+  }
+  // 套用「地價升值」：每張繁華區地塊上建築額外 +2 金幣
+  const dijia = techDefinitions['地價升值']?.count || 0;
+  if (dijia > 0 && t.buildingPlaced && t.type === 'city') {
+    t.buildingProduce += dijia * 2;
+  }
   });
   // 5. 累加
   tileMap.forEach(t=>{ if(t.buildingPlaced) total+=t.buildingProduce; });
@@ -765,8 +779,14 @@ function updateTechTree() {
   const ul = document.getElementById('tech-list');
   ul.innerHTML = '';
   for (const [name, def] of Object.entries(techDefinitions)) {
+    // 如果有 perLevel，則依照等級動態計算「+X 金幣」
+    let desc = def.description;
+    if (def.perLevel) {
+      const total = def.perLevel * def.count;
+      desc = `${def.description} +${total} 金幣`;
+    }
     const li = document.createElement('li');
-    li.innerText = `${name}：${def.description}  ${def.count}/${def.max}`;
+    li.innerText = `${name}：${desc}  ${def.count}/${def.max}`;
     ul.appendChild(li);
   }
 }
