@@ -758,12 +758,20 @@ function recalcRevenueFromScratch(){
     // 「廢物利用」：荒原地塊每等級 + perLevel 金幣
     const wuluDef = techDefinitions['廢物利用'];
     if (wuluDef) {
-      val += wuluDef.perLevel * wuluDef.count;
+    val += wuluDef.perLevel * wuluDef.count;
     }
-    // 「地價升值」：繁華區地塊每等級 + perLevel 金幣
+    const wuluDef = techDefinitions['廢物利用'];
+    if (wuluDef && t.type === 'wasteland') {
+    val += wuluDef.perLevel * wuluDef.count;
+    }
+    // 「地價升值」：僅對繁華區地塊，每等級 + perLevel 金幣
     const dijiaDef = techDefinitions['地價升值'];
     if (dijiaDef) {
-      val += dijiaDef.perLevel * dijiaDef.count;
+    val += dijiaDef.perLevel * dijiaDef.count;
+    }
+    const dijiaDef = techDefinitions['地價升值'];
+    if (dijiaDef && t.type === 'city') {
+    val += dijiaDef.perLevel * dijiaDef.count;
     }
     total += val;
   });
