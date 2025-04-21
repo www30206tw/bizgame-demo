@@ -44,12 +44,23 @@
     <div class="middle-section">
       <div class="sidebar">
         <button disabled>科技樹</button>
+        <div class="sidebar">
+          <button id="tech-button">科技樹</button>
       </div>
       <div class="map-area" id="map-area"></div>
       <div class="sidebar">
         <button id="undo-btn" disabled>復原</button>
    <!-- 懸浮窗 -->
       <div id="hcover" class="hcover"></div>
+      </div>
+    </div>
+
+    <!-- 科技樹 Modal -->
+    <div id="tech-modal" class="warning-modal" style="display:none; z-index:1003;">
+      <div class="warning-content">
+        <h2>科技樹</h2>
+        <ul id="tech-list"></ul>
+        <button id="close-tech-btn">關閉</button>
       </div>
     </div>
 
