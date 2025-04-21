@@ -798,10 +798,10 @@ function computeEffectiveRevenue(){
     if (dijiaDef && t.type === 'city') {
       v += dijiaDef.perLevel * dijiaDef.count;
     }
-    // 3. 荒原随机失效（50%几率不产出）
-    if (t.type === 'wasteland' && Math.random() < 0.5) {
-      v = 0;
-    }
+    // 3. 荒原标签效果：若建筑标签是「荒原」且放在非荒原地块，则50%机率不产出
+     if (t.buildingLabel === '荒原' && t.type !== 'wasteland' && Math.random() < 0.5) {
+       v = 0;
+     }
     eff += v;
   });
 
