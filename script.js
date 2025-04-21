@@ -316,14 +316,27 @@ function initMapArea(){
     labelPopup.innerText = `${tileData.buildingLabel}：${labelEffectDesc[tileData.buildingLabel]}`;
     document.body.appendChild(labelPopup);
 
-    // 2.5地塊能力
+    // 3. 地塊能力
    const tilePopup = document.createElement('div');
    tilePopup.className = 'hcover hcover-popup';
    tilePopup.innerText = `地塊效果：${tileEffectDesc[tileData.type]}`;
    tilePopup.style.display = 'block';
    document.body.appendChild(tilePopup);
 
-    // 3. 本回合產出（含科技加成）
+    // 4.新增：科技加成 —— 
+    const techBonusPopup = document.createElement('div');
+    techBonusPopup.className = 'hcover hcover-popup';
+    techBonusPopup.style.display = 'block';
+    // 計算「廢物利用」與「地價升值」對這格的加成
+    const wulu = techDefinitions['廢物利用'];
+    const dijia = techDefinitions['地價升值'];
+    const bonusWulu = tileData.type === 'wasteland' ? wulu.perLevel * wulu.count : 0;
+    const bonusDijia = tileData.type === 'city'     ? dijia.perLevel * dijia.count : 0;
+    const techBonus = bonusWulu + bonusDijia;
+    techBonusPopup.innerText = `科技加成：${techBonus}`;
+    document.body.appendChild(techBonusPopup);
+
+    // 5. 本回合產出（含科技加成）
     const producePopup = document.createElement('div');
     producePopup.className = 'hcover hcover-popup';
     producePopup.style.display = 'block';
@@ -347,13 +360,17 @@ function initMapArea(){
    labelPopup.style.left   = `${offsetX}px`;
    labelPopup.style.display= 'block';
 
-   // 2.5 地塊效果（標籤下方 10px）
+   // 3. 地塊效果（標籤下方 10px）
    tilePopup.style.top     = `${rect.top + labelPopup.offsetHeight + 10}px`;
    tilePopup.style.left    = `${offsetX}px`;
    tilePopup.style.display = 'block';
 
-   // 3. 本回合產出（再下方 10px）
-   producePopup.style.top    = `${rect.top + labelPopup.offsetHeight + tilePopup.offsetHeight + 20}px`;
+  // 4. 科技加成（地塊能力下方 10px）
+   techBonusPopup.style.top   = `${rect.top + labelPopup.offsetHeight + tilePopup.offsetHeight + 20}px`;
+   techBonusPopup.style.left  = `${offsetX}px`;
+
+   // 5. 本回合產出（再下方 10px）
+   producePopup.style.top    = `${rect.top + labelPopup.offsetHeight + tilePopup.offsetHeight + 30}px`;
    producePopup.style.left   = `${offsetX}px`;
    producePopup.style.display= 'block';
    }
