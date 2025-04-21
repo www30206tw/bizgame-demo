@@ -104,6 +104,10 @@ function restartGame() {
   warningNextRoundShown = false;
   lastPlacement = null;
 
+  // 新增：重置科技樹中的已用次數，並更新畫面
+  Object.values(techDefinitions).forEach(def => def.count = 0);
+  updateTechTree();
+
   // 重建地圖與手牌
   tileMap = createTileMap31();
   computeAdj();
