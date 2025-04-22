@@ -23,7 +23,7 @@ const typeMapping = {
 };
 
 const cardPoolData = [
-  { name:'淨水站', rarity:'普通', label:'河流',     baseProduce:4, specialAbility:'回合結束時，有50%機率產出額外+1' ,type:'building' },
+  { name:'淨水站', rarity:'普通', label:'河流',     baseProduce:4, specialAbility:'若相鄰地塊有河流地塊，則產出 +1' ,type:'building' },
   { name:'星軌會館', rarity:'稀有', label:'繁華區',  baseProduce:6, specialAbility:'沒有任何建築相臨時，產出額外+2' ,type:'building' },
   { name:'摩天坊', rarity:'普通', label:'繁華區', baseProduce:5 ,type:'building' },
   { name:'集貧居', rarity:'普通', label:'貧民窟', baseProduce:4 ,type:'building' },
@@ -31,7 +31,7 @@ const cardPoolData = [
   { name:'廢材棚', rarity:'普通', label:'荒原',   baseProduce:4 ,type:'building' },
   { name:'社群站', rarity:'普通', label:'貧民窟', baseProduce:4, specialAbility:'當有任何建築相臨時，產出額外+1' ,type:'building' },
   { name:'彈出商亭', rarity:'普通', label:'繁華區', baseProduce:5, specialAbility:'當位於任何邊緣地塊時，產出額外+1' ,type:'building' },
-  { name:'地脈節點', rarity:'普通', label:'荒原', baseProduce:6, specialAbility:'當剛好有兩個建築相臨時，產出額外+1' ,type:'building' },
+  { name:'地脈節點', rarity:'普通', label:'荒原', baseProduce:6, specialAbility:'當恰好有兩個建築相臨時，包含此建築的，合計三座建築產出額外+1' ,type:'building' },
   { name:'匯聚平臺', rarity:'稀有', label:'貧民窟', baseProduce:5, specialAbility:'當相鄰的建築超過2個時，產出額外+2' ,type:'building' },
   { name:'流動站',   rarity:'稀有', label:'河流',   baseProduce:5, specialAbility:'若相鄰的建築位於河流地塊上，該建築產出額外+1' ,type:'building' },
   { name:'焚料方艙', rarity:'稀有', label:'荒原',   baseProduce:8, specialAbility:'若本回合為偶數回合，產出永久−1，最多永久減少4' ,type:'building' },
@@ -53,7 +53,7 @@ const labelEffectDesc = {
   "繁華區":"蓋在繁華區時+4",
   "貧民窟":"相鄰貧民窟建築每座+1",
   "河流":"蓋在河流時+3",
-  "荒原":"非荒原地塊50%機率不產出"
+  "荒原":"非荒原地塊產出 -2"
 };
 
 // 在 labelEffectDesc 之後，加入
@@ -82,7 +82,7 @@ const tileTypeNames = {
 };
 
 // ——— 支付節點設定 ———
-const paymentSchedule = { 5:180, 10:640, 16:1450 };
+const paymentSchedule = { 5:180, 10:640, 16:1450 ,22:2400};
 
 let tileMap = [];
 
@@ -136,7 +136,8 @@ function shuffle(arr) {
 function getRarityDistribution(round) {
   if (round <= 5)   return { 普通: 1.0, 稀有: 0.0 };
   if (round <= 10)  return { 普通: 0.85, 稀有: 0.15 };
-                     return { 普通: 0.75, 稀有: 0.25 };
+  if (round <= 16)  return { 普通: 0.75, 稀有: 0.25 };
+  if (round <= 22)  return { 普通: 0.6, 稀有: 0.4 };
 }
 
 //從一個 {key: weight, …} 物件隨機選一個 key。
@@ -631,6 +632,10 @@ function recalcRevenueFromScratch(){
       pv-=1;
       if(t.buildingLabel==='河流') pv+=3;
     }
+    // 新增：荒原標籤效果（非荒原地塊 −2）
+   if (t.buildingLabel === '荒原' && t.type !== 'wasteland') {
+     pv -= 2;
+   }
     t.buildingProduce = pv;
   });
   // 2. slum BFS 群聚 +1
@@ -663,7 +668,14 @@ function recalcRevenueFromScratch(){
   // 4. specialAbility on water & star
   tileMap.forEach(t=>{
     if(!t.buildingPlaced) return;
-    if(t.buildingName==='淨水站'&&Math.random()<0.5) t.buildingProduce++;
+    // 新：若「淨水站」旁邊有河流地塊，則產出 +1
+    if (t.buildingName === '淨水站') {
+       const hasRiverNeighbor = t.adjacency.some(id => {
+        const nt = tileMap.find(x => x.id === id);
+        return nt && nt.type === 'river';
+      });
+      if (hasRiverNeighbor) t.buildingProduce++;
+   }
     if(t.buildingName==='星軌會館'){
        const hasN = t.adjacency.some(id=>{
         const nt=tileMap.find(x=>x.id===id);
@@ -747,7 +759,6 @@ function recalcRevenueFromScratch(){
     }
     // 河流標籤：蓋在河流時 +3
     if (t.type === 'river') t.buildingProduce += 3;
-    // 荒原標籤的「50% 機率不產出」會在 computeEffectiveRevenue() 階段自動套用
   }
   });
   // 5. 累加
@@ -782,33 +793,6 @@ function showModal(message) {
 document.getElementById('warning-close-btn').onclick = () => {
   document.getElementById('warning-modal').style.display = 'none';
 };
-
-// 輔助：計算實際入帳（含荒原50%機率不產出 & 科技加成）
-function computeEffectiveRevenue(){
-  let eff = 0;
-  const wuluDef  = techDefinitions['廢物利用'];
-  const dijiaDef = techDefinitions['地價升值'];
-
-  tileMap.forEach(t => {
-    if (!t.buildingPlaced) return;
-    // 1. 基础产出
-    let v = t.buildingProduce;
-    // 2. 科技加成
-    if (wuluDef && t.type === 'wasteland') {
-      v += wuluDef.perLevel * wuluDef.count;
-    }
-    if (dijiaDef && t.type === 'city') {
-      v += dijiaDef.perLevel * dijiaDef.count;
-    }
-    // 3. 荒原标签效果：若建筑标签是「荒原」且放在非荒原地块，则50%机率不产出
-     if (t.buildingLabel === '荒原' && t.type !== 'wasteland' && Math.random() < 0.5) {
-       v = 0;
-     }
-    eff += v;
-  });
-
-  return eff;
-}
 
 // 啟動 Draw
 function startDrawPhase(){
@@ -893,8 +877,8 @@ window.onload = () => {
   document.getElementById('tech-button').onclick    = showTechModal;
   document.getElementById('close-tech-btn').onclick = hideTechModal;
   endTurnBtn.onclick = () => {
-  // 1. 計算本回合實際入帳並累加
-  currentGold += computeEffectiveRevenue();
+  // 1. 直接把「回合收益」加給玩家
+  currentGold += roundRevenue;
   updateResourceDisplay();
   // 2. 更新 UI（金幣 & 回合收益）
   if (paymentSchedule[currentRound]) {
@@ -904,7 +888,8 @@ window.onload = () => {
       let msg = '';
       if (currentRound === 5)      msg = '至少也要付一點錢吧●–●!';
       else if (currentRound === 10) msg = '下一把會更好>_<';
-      else if (currentRound === 16) msg = '就差一點了，再努力一下 O口O';
+      else if (currentRound === 16) msg = '下一把會更好>_<';
+      else if (currentRound === 22) msg = '就差一點了，再努力一下 O口O';
       else                          msg = '遊戲結束';
       showEndScreen(msg);
       return;
@@ -915,8 +900,8 @@ window.onload = () => {
 
       showModal('成功支付金幣!');
       // 第16回合支付後即勝利
-      if (currentRound === 16) {
-        showEndScreen('遊戲勝利!!');
+      if (currentRound === 22) {
+        showEndScreen('勝利!!');
         return;
       }
     }
