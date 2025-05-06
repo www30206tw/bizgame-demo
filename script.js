@@ -9,6 +9,8 @@ let roundRevenue = 0;
 let refreshCount = 0;
 let warningNextRoundShown = false;
 let lastPlacement = null;
+let draggingCardInfo = null;
+let dragOverlay = null;
 
 const rows = [4,5,4,5,4,5,4];
 const typeMapping = {
@@ -213,6 +215,194 @@ function computeAdj(){
   });
 }
 
+// —— 计算给定 map 上的总收益（纯函数，不改全局 tileMap） —— 
+function calculateRevenue(map) {
+  // 深拷贝一份 map 数据（仅对象层面）
+  const clone = map.map(t => ({
+    ...t,
+    adjacency: [...t.adjacency],       // 保留邻接列表
+    buildingProduce: t.buildingProduce,
+    buildingBaseProduce: t.buildingBaseProduce,
+    buildingLabel: t.buildingLabel,
+    buildingPlaced: t.buildingPlaced
+  }));
+
+  // 重算每格 buildingProduce
+  clone.forEach(t => {
+    if (!t.buildingPlaced) return;
+    let pv = t.buildingBaseProduce;
+    // 地块+标签
+    if (t.type === 'city') {
+      pv += 2 + (t.buildingLabel==='繁華區'?4:0);
+    } else if (t.type==='river') {
+      pv += -1 + (t.buildingLabel==='河流'?3:0);
+    } else if (t.type==='slum' && t.buildingLabel==='貧民窟') {
+      pv += 1;
+    }
+    if (t.buildingLabel==='荒原' && t.type!=='wasteland') pv -= 2;
+    t.buildingProduce = pv;
+  });
+
+  // slum 群聚
+  const visited = new Set();
+  clone.forEach(t => {
+    if (!t.buildingPlaced || t.type!=='slum' || visited.has(t.id)) return;
+    const queue=[t.id], cluster=[];
+    while(queue.length){
+      const id=queue.shift();
+      if (visited.has(id)) continue;
+      visited.add(id);
+      const ct=clone.find(x=>x.id===id);
+      if(ct&&ct.buildingPlaced&&ct.type==='slum'){
+        cluster.push(ct);
+        ct.adjacency.forEach(nid=>!visited.has(nid)&&queue.push(nid));
+      }
+    }
+    if(cluster.length>=3){
+      cluster.forEach(ct=> ct.buildingProduce++);
+    }
+  });
+
+  // slum 相鄰貧民窟
+  clone.forEach(t => {
+    if(!t.buildingPlaced||t.type!=='slum'||t.buildingLabel!=='貧民窟') return;
+    const adjCount = t.adjacency
+      .map(id=>clone.find(x=>x.id===id))
+      .filter(x=>x&&x.buildingPlaced).length;
+    t.buildingProduce += Math.min(adjCount,5);
+  });
+
+  // 其它 specialAbility（淨水站、星軌會館、社群站、彈出商亭、地脈節點、匯聚平臺、流動站、焚料方艙、灣岸輸能站、垂直農倉、通訊樞紐）
+  clone.forEach(t => {
+    if (!t.buildingPlaced) return;
+    // ……（把 recalcRevenueFromScratch 里对应的那一大段 specialAbility 逻辑全部复制到这里，针对 clone 而非全局）……
+    if (t.buildingName === '淨水站') {
+       const hasRiverNeighbor = t.adjacency.some(id => {
+        const nt = tileMap.find(x => x.id === id);
+        return nt && nt.type === 'river';
+      });
+      if (hasRiverNeighbor) t.buildingProduce++;
+   }
+    if(t.buildingName==='星軌會館'){
+       const hasN = t.adjacency.some(id=>{
+        const nt=tileMap.find(x=>x.id===id);
+        return nt&&nt.buildingPlaced;
+      });
+      if(!hasN) t.buildingProduce+=2;
+    }
+    // 社群站：若與至少 1 座其他建築相鄰，額外 +1
+   if(t.buildingName==='社群站'){
+       const hasNeighbor = t.adjacency.some(id=>{
+       const nt=tileMap.find(x=>x.id===id);
+       return nt&&nt.buildingPlaced;
+     });
+     if(hasNeighbor) t.buildingProduce++;
+   }
+   // 彈出商亭：若處於地圖邊緣格，額外 +1
+   if(t.buildingName==='彈出商亭'){
+     const row = t.row, col = t.col;
+     const lastRow = rows.length - 1;
+     const rowCount = rows[row];
+     if(row === 0 || row === lastRow || col === 0 || col === rowCount - 1){
+       t.buildingProduce++;
+     }
+   }
+  // 地脈節點：若相鄰建築恰為2，則包含自己在內的3座每座+1
+   if(t.buildingName==='地脈節點'){
+     const nei = t.adjacency
+       .map(id=>tileMap.find(x=>x.id===id))
+       .filter(x=>x && x.buildingPlaced);
+     if(nei.length===2){
+       t.buildingProduce++;
+       nei.forEach(x=>x.buildingProduce++);
+     }
+   }
+  // 匯聚平臺：若與3座以上建築相鄰，額外+2
+   if(t.buildingName==='匯聚平臺'){
+     const cnt = t.adjacency
+       .map(id=>tileMap.find(x=>x.id===id))
+       .filter(x=>x && x.buildingPlaced)
+       .length;
+     if(cnt>3) t.buildingProduce+=2;
+   }
+  // 流動站：若自身在河流上，相鄰且也在河流的建築每座+1
+   if(t.buildingName==='流動站' && t.type==='river'){
+     t.adjacency.forEach(id=>{
+       const x=tileMap.find(y=>y.id===id);
+       if(x && x.buildingPlaced && x.type==='river'){
+         x.buildingProduce++;
+       }
+     });
+   }
+  // 焚料方艙：偶數回合產出−1，下限4
+   if(t.buildingName==='焚料方艙'){
+     if(currentRound % 2 === 0){
+       t.buildingProduce = Math.max(t.buildingProduce - 1, 4);
+     }
+   }
+  // 灣岸輸能站：若不在河流地塊，每回合 −1
+  if (t.buildingName === '灣岸輸能站' && t.type !== 'river') {
+    t.buildingProduce -= 1;
+  }
+  // 垂直農倉：每有 1 座鄰接的垂直農倉，+1（金幣），最多 +2
+  if (t.buildingName === '垂直農倉') {
+    const neiCount = t.adjacency.filter(id => {
+      const nt = tileMap.find(x => x.id === id);
+      return nt && nt.buildingPlaced && nt.buildingName === '垂直農倉';
+    }).length;
+    t.buildingProduce += Math.min(neiCount, 2);
+  }
+  // 通訊樞紐：觸發所有地塊標籤效果（不改變地塊本身的 City/Slum…效果）
+  if (t.buildingName === '通訊樞紐') {
+    // 繁華區標籤：蓋在繁華區時 +4
+    if (t.type === 'city') t.buildingProduce += 4;
+    // 貧民窟標籤：蓋在貧民窟時，相鄰每座建築 +1
+    if (t.type === 'slum') {
+      const adjCount = t.adjacency.filter(id => {
+        const nt = tileMap.find(x => x.id === id);
+        return nt && nt.buildingPlaced;
+      }).length;
+      t.buildingProduce += adjCount;
+    }
+    // 河流標籤：蓋在河流時 +3
+    if (t.type === 'river') t.buildingProduce += 3;
+  }
+  });
+
+  // 最后累计，包括「廢物利用」和「地價升值」的科技加成
+   const wuluDef  = techDefinitions['廢物利用'];
+   const dijiaDef = techDefinitions['地價升值'];
+   return clone.reduce((sum, t) => {
+     if (!t.buildingPlaced) return sum;
+     let v = t.buildingProduce;
+     // 科技：荒原地塊每等級 + perLevel
+     if (wuluDef && t.type === 'wasteland') {
+       v += wuluDef.perLevel * wuluDef.count;
+     }
+     // 科技：繁華區地塊每等級 + perLevel
+     if (dijiaDef && t.type === 'city') {
+       v += dijiaDef.perLevel * dijiaDef.count;
+     }
+     return sum + v;
+   }, 0);
+}
+  
+  // 模拟：如果把当前拖拽的卡放到 tileId 对应的格子，整轮总收益会变成多少？返回 (新 - 旧)
+function simulateTotalDiff(tileId) {
+  // 原本的收益
+  const original = roundRevenue;
+  // 插入拖拽卡到 clone map
+  const mapClone = tileMap.map(t=> ({ ...t, adjacency:[...t.adjacency] }));
+  const target = mapClone.find(t=>t.id === Number(tileId));
+  target.buildingPlaced = true;
+  target.buildingBaseProduce = draggingCardInfo.baseProduce;
+  target.buildingLabel = draggingCardInfo.label;
+  target.buildingName  = draggingCardInfo.name;          // 如果 draggingCardInfo 里也存了 name、rarity、specialAbility，记得同时拷贝
+  // 计算新总收益
+  const updated = calculateRevenue(mapClone);
+  return updated - original;
+}
+
 // 將地圖渲染到畫面
 function initMapArea(){
   const mapArea = document.getElementById('map-area');
@@ -275,23 +465,15 @@ function initMapArea(){
       document.querySelectorAll('.hcover-popup').forEach(el => el.remove());
 
   const tileData = tileMap.find(t => String(t.id) === hex.dataset.tileId);
-  const rect = hex.getBoundingClientRect();
 
-  if (!tileData.buildingPlaced) {
-    // —— 空地：中英地塊名稱 —— 
-    const popup = document.createElement('div');
-    popup.className = 'hcover hcover-popup';
-    popup.innerHTML =
-    `地塊類型：${tileData.type}（${tileTypeNames[tileData.type]}）<br>` +
-    `地塊效果：${tileEffectDesc[tileData.type]}`;
-    popup.style.top  = `${rect.top}px`;
-    popup.style.left = `${rect.right + 5}px`;
-    popup.style.display = 'block';
-    document.body.appendChild(popup);
-
-    } 
-  else {
-    // —— 已放建築：三個懸浮框 —— 
+    // 空地時直接返回，不顯示任何 hcover
+   if (!tileData.buildingPlaced) {
+     return;
+   }
+   // 放了建築才取 rect 並顯示 popup
+   const rect = hex.getBoundingClientRect();
+      
+   // —— 已放建築：三個懸浮框 —— 
 
     // 1. 完整卡牌
     const cardPopup = document.createElement('div');
@@ -374,7 +556,6 @@ function initMapArea(){
    producePopup.style.top    = `${currentTop}px`;
    producePopup.style.left   = `${offsetX}px`;
    producePopup.style.display= 'block';
-     }
   });
 
     // 滑鼠移出：隱藏懸浮窗
@@ -382,7 +563,67 @@ function initMapArea(){
       document.querySelectorAll('.hcover-popup').forEach(el => el.remove());
     });
 
+    // 拖过地块时，显示对应预览
+    hex.addEventListener('dragover', e => {
+  if (!draggingCardInfo) return;
+  e.preventDefault();
+  clearPreviews();
+  showPreviews();
+  // 顯示左上角總影響
+  const diff = simulateTotalDiff(hex.dataset.tileId);
+  const pd = document.getElementById('preview-diff');
+  if (diff !== 0) {
+    pd.innerText = diff > 0 ? ` (+${diff})` : ` (${diff})`;
+    pd.style.color   = diff > 0 ? 'green' : 'red';
+    pd.style.display = 'inline';
+   }
+  });
+
      mapArea.appendChild(hex);
+  });
+}
+
+// 刪除所有舊的預覽數字（body 底下的 .preview-label）
+function clearPreviews() {
+  document.querySelectorAll('.preview-label').forEach(el => el.remove());
+  // 同步隱藏左上角那個
+  document.getElementById('preview-diff').style.display = 'none';
+  // 還原所有空地的「?」
+   tileMap.forEach(t => {
+     if (!t.buildingPlaced) {
+       const hex = document.querySelector(`[data-tile-id="${t.id}"]`);
+       if (hex) hex.textContent = '?';
+     }
+   });
+}
+
+// 在 body 底下依照每個 hex 的真實畫面座標生成 .preview-label
+function showPreviews() {
+  // 先隱藏所有空地上的「?」
+   tileMap.forEach(t => {
+     if (!t.buildingPlaced) {
+       const hex = document.querySelector(`[data-tile-id="${t.id}"]`);
+       if (hex) hex.textContent = '';
+     }
+   });
+  
+  tileMap.forEach(t => {
+    const hex = document.querySelector(`[data-tile-id="${t.id}"]`);
+    if (!hex) return;
+    const diff = simulateTotalDiff(t.id);
+
+    // 1) 取得畫面座標
+    const r = hex.getBoundingClientRect();
+    // 2) 建立固定定位的 label
+    const lbl = document.createElement('div');
+    lbl.className = 'preview-label';
+    lbl.innerText = (diff > 0 ? '+' + diff : diff);
+    lbl.style.color = diff > 0 ? '#39ff14'
+                     : diff < 0 ? 'red'
+                     : 'black';
+    lbl.style.left = (r.left + r.width/2) + 'px';
+    lbl.style.top  = (r.top  + r.height/2) + 'px';
+    document.body.appendChild(lbl);
   });
 }
 
@@ -462,6 +703,28 @@ function createBuildingCard(info){
   // 拖曳
   card.draggable = true;
   card.addEventListener('dragstart', e => {
+
+  // 取消原生 drag image：用 1×1 透明圖
+  const img = new Image();
+  img.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAACVBMVEUAAAD///+l2Z/dAAAACklEQVQI12NgAAAAAgAB4iG8MwAAAABJRU5ErkJggg==';
+  e.dataTransfer.setDragImage(img, 0, 0);
+     
+  // 记录拖拽中的卡片 info，并加半透明
+  draggingCardInfo = {
+     name:             info.name,
+     type:             info.type,
+     baseProduce:      info.baseProduce,
+     label:            info.label,
+     specialAbility:   info.specialAbility || '',
+     rarity:           info.rarity
+   };
+
+   // 3) 建立自製浮層：clone 當前 card
+  dragOverlay = card.cloneNode(true);
+  dragOverlay.classList.add('drag-overlay');
+  document.body.appendChild(dragOverlay);
+  card.classList.add('dragging');
+    
   // 1. 設定拖曳資料
   e.dataTransfer.setData('cardId', card.dataset.cardId);
   
@@ -477,9 +740,6 @@ function createBuildingCard(info){
     });
   }
 
-  // 3. 強制 drag image 使用本體
-  e.dataTransfer.setDragImage(card, card.clientWidth/2, card.clientHeight/2);
-
   // 3.1 拖曳啟動後，延遲隱藏手排中的自己（拿在手上）
   setTimeout(() => {
   const hand = document.getElementById('hand');
@@ -490,6 +750,15 @@ function createBuildingCard(info){
 });
 
  card.addEventListener('dragend', e => {
+  // 移除自製浮層
+  if (dragOverlay) {
+    dragOverlay.remove();
+    dragOverlay = null;
+  }
+  // 拖拽結束：清空拖拽狀態、移除預覽、恢復卡片不透明
+   draggingCardInfo = null;
+   clearPreviews();
+   card.classList.remove('dragging');
   // 先把自身 tooltip 還原
   const tip = card.querySelector('.tooltip');
   if (tip) tip.style.display = '';
@@ -860,6 +1129,23 @@ window.onload = () => {
      showDrawBtn.style.display = 'none';
      console.log('show-draw-btn clicked, draw-section shown');
    });
+
+  // 地塊資訊收合控制
+  const panel = document.getElementById('tile-info-panel');
+  // 在 index.html 最底下新增展開按鈕
+  const expandBtn = document.createElement('button');
+  expandBtn.id = 'expand-tile-info';
+  expandBtn.innerText = '展開';
+  document.querySelector('.middle-section').appendChild(expandBtn);
+ 
+  document.getElementById('toggle-tile-info').addEventListener('click', () => {
+    panel.style.display = 'none';
+    expandBtn.style.display = 'block';
+  });
+  expandBtn.addEventListener('click', () => {
+    panel.style.display = 'block';
+    expandBtn.style.display = 'none';
+  });
   
   undoBtn.disabled = true;  // 初始關閉
   undoBtn.onclick = () => {
@@ -951,3 +1237,10 @@ window.onload = () => {
   
   document.getElementById('refresh-btn').onclick = refreshCards;
 };
+
+document.addEventListener('drag', e => {
+  if (!dragOverlay) return;
+  // 中心置齊
+  dragOverlay.style.left = (e.clientX - dragOverlay.offsetWidth/2) + 'px';
+  dragOverlay.style.top  = (e.clientY - dragOverlay.offsetHeight/2) + 'px';
+});

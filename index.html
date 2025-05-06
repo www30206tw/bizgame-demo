@@ -20,6 +20,7 @@
       <div class="gold-info">
         金幣：<span id="gold-amount">0</span><br />
         回合收益：<span id="round-gold">0</span>
+        <span id="preview-diff" style="display:none; margin-left:8px;"></span>
       </div>
       <div class="center-info">
         <div class="round-info">回合數：<span id="round-number">1</span></div><br />
@@ -36,9 +37,9 @@
           <button id="refresh-btn" onclick="refreshCards()">刷新卡片(2 金幣)</button>
           <button onclick="skipDraw()">跳過本輪抽卡（+10 金幣）</button>
           <button onclick="confirmDraw()">確定選卡</button>
-          <!-- 新增：隱藏抽卡介面 -->
-          <button id="hide-draw-btn" type="button">隱藏</button>
         </div>
+        <!-- 把「隱藏」按鈕獨立到這裡，畫面右下角 -->
+        <button id="hide-draw-btn" type="button">隱藏</button>
       </div>
     </div>
 
@@ -50,6 +51,27 @@
       <!-- 左側：科技樹按鈕 -->
       <div class="sidebar">
         <button id="tech-button">科技樹</button>
+      </div>
+
+    <!-- 新增：地塊資訊面板（預設展開） -->
+      <div id="tile-info-panel">
+        <div class="tile-info-item">
+          <div class="hex-tile city-tile small"></div>
+          <span>繁華區：所有建築產出 +2</span>
+        </div>
+        <div class="tile-info-item">
+          <div class="hex-tile slum-tile small"></div>
+          <span>貧民窟：若 3 塊（含）以上相連且都有建築，則各額外 +1</span>
+        </div>
+        <div class="tile-info-item">
+          <div class="hex-tile river-tile small"></div>
+          <span>河流：建築產出 −1</span>
+        </div>
+        <div class="tile-info-item">
+          <div class="hex-tile wasteland-tile small"></div>
+          <span>荒原：無效果</span>
+        </div>
+        <button id="toggle-tile-info">收起</button>
       </div>
 
       <!-- 中間：地塊區 -->

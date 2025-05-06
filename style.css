@@ -14,6 +14,7 @@ body {
 
 /* 中間區域 */
 .middle-section {
+  position: relative;
   display: flex;
   background: #74b9ff;
   height: 480px;
@@ -49,7 +50,9 @@ body {
   padding: 20px;
   text-align: center;
   margin: auto;
+  position: relative;
 }
+
 #draw-section {
   position: fixed;
   top: 0;
@@ -148,6 +151,14 @@ body {
   display: block;
 }
 
+/* 調整「隱藏」按鈕位置 */
+#hide-draw-btn {
+  position: absolute;
+  bottom: 16px;   /* 距離 draw-box 底部 */
+  right: 16px;    /* 距離 draw-box 右側 */
+  /* （可再加上想要的 padding / 顏色 等） */
+}
+
 /* 六邊形地塊 */
 .hex-tile {
   width: 80px;
@@ -178,6 +189,23 @@ body {
 }
 .wasteland-tile {
   background-color: #d4ac0d;
+}
+
+/* 拖拽中的卡片半透明 */
+.card.dragging {
+  opacity: 0.5;
+}
+
+/* 预览数字标签 */
+.preview-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 30px;
+  font-weight: bold;
+  pointer-events: none;
+  z-index: 1500;
 }
 
 /* 遊戲開始畫面 */
@@ -288,3 +316,98 @@ body {
   cursor: pointer;
   z-index: 1001;               /* 要高於地圖但低於 draw-section (999) */
 }
+
+/* 地塊資訊面板 */
+#tile-info-panel {
+  position: absolute;
+  top: 30px;    /* 往下 30px，落在中間區上方 */
+  left: 100px;  /* 左側 sidebar 80px + 20px 間距 */
+  background: rgba(255,255,255,0.9);
+  padding: 8px;
+  border-radius: 6px;
+  z-index: 500;
+}
+.tile-info-item .hex-tile {
+  /* 让它按照 flex 流式排列，不再 absolute */
+  position: static;
+  /* small 规则已设宽高，这里加点右边距推开文字 */
+  margin-right: 6px;
+}
+.tile-info-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.tile-info-item .small {
+  width: 20px;
+  height: 20px;
+  margin-right: 6px;
+}
+#toggle-tile-info {
+  display: block;
+  margin-top: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* 當面板隱藏時，只留展開按鈕 */
+#expand-tile-info {
+  display: none;
+  position: absolute;
+  /* 面板 top:30px + 内部 padding-top:8px */
+  top: calc(30px + 8px);
+  left: 100px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  z-index: 500;
+}
+
+#preview-diff {
+  font-weight: bold;
+  /* 颜色在 JS 里动态设 */
+}
+
+/* 拖曳時我們自己的卡牌浮層 */
+.drag-overlay {
+  position: fixed;
+  pointer-events: none;
+  opacity: 0.5;
+  z-index: 2000;   /* 比預設 DOM 高 */
+}
+
+/* 讓預覽數字更罩得住浮層 */
+.preview-label {
+  z-index: 2100 !important;
+}
+
+/* 拖曳中自製卡牌浮層，層級 2000 */
+.drag-overlay {
+  position: fixed;
+  pointer-events: none;
+  opacity: 0.5;
+  z-index: 2000;
+}
+
+/* 預覽數字，用 fixed 定位，層級 2100 */
+.preview-label {
+  position: fixed;
+  transform: translate(-50%, -50%);
+  font-size: 24px;      /* 可以再調大或調粗 */
+  font-weight: bold;
+  pointer-events: none;
+  z-index: 2100 !important;
+}
+
+.preview-label {
+  text-shadow: 0 0 8px rgba(57,255,20,0.8);
+}
+
+/* 左上角總影響數 */
+#preview-diff {
+  font-weight: bold;
+  /* 顏色／顯示在 JS 裡動態設定 */
+}
+
+
