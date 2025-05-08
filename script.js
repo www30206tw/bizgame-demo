@@ -11,18 +11,80 @@ let warningNextRoundShown = false;
 let lastPlacement = null;
 let draggingCardInfo = null;
 let dragOverlay = null;
+let initialTileTypes = [];
 
 const rows = [4,5,4,5,4,5,4];
-const typeMapping = {
-  1:'wasteland', 2:'wasteland', 3:'wasteland', 4:'wasteland',
-  5:'wasteland', 6:'slum',      7:'slum',      8:'wasteland',
-  9:'river',     10:'slum',     11:'city',     12:'slum',
-  13:'river',    14:'slum',     15:'city',     16:'city',
-  17:'river',    18:'wasteland',19:'slum',     20:'slum',
-  21:'river',    22:'wasteland',23:'wasteland',24:'slum',
-  25:'river',    26:'wasteland',27:'wasteland',28:'wasteland',
-  29:'river',    30:'wasteland',31:'wasteland'
-};
+
+// 檢查河流塊是否相連，且至少一個在邊緣
+function isRiverLayoutValid(types) {
+  // 建立簡化的 tileMap 結構
+  const nodes = types.map((type, idx) => {
+    // row/col 計算同 createTileMap31
+    let cum = 0, row = 0, col = 0;
+    for (; row < rows.length; row++) {
+      if (idx < cum + rows[row]) { col = idx - cum; break; }
+      cum += rows[row];
+    }
+    return { id: idx+1, type, row, col };
+  });
+  // adjacency
+  const adj = id => {
+    const t = nodes[id-1];
+    const dirs = (t.row % 2===0) ? directionsEven : directionsOdd;
+    return dirs
+      .map(d=> nodes.find(n=> n.row===t.row+d.dr && n.col===t.col+d.dc))
+      .filter(n=> n);
+  };
+  // 找到所有河流塊
+  const rivers = nodes.filter(n=>n.type==='river').map(n=>n.id);
+  if (rivers.length===0) return false;
+  // BFS 檢查連通性
+  const vis = new Set([rivers[0]]), queue=[rivers[0]];
+  while(queue.length){
+    const cur = queue.shift();
+    adj(cur).forEach(n=>{
+      if (n.type==='river' && !vis.has(n.id)) {
+        vis.add(n.id);
+        queue.push(n.id);
+      }
+    });
+  }
+  if (vis.size !== rivers.length) return false;
+  // 邊緣至少一個 river
+  const edgeIds = nodes
+    .filter(n=>{
+      const lastRow = rows.length-1, rowCount=rows[n.row];
+      return n.row===0||n.row===lastRow||n.col===0||n.col===rowCount-1;
+    })
+    .map(n=>n.id);
+  if (!rivers.some(r=> edgeIds.includes(r))) return false;
+  return true;
+}
+
+// 檢查每個貧民窟塊至少有兩個相鄰貧民窟
+function isSlumLayoutValid(types) {
+  const nodes = types.map((type, idx) => {
+    let cum=0,row=0,col=0;
+    for (; row<rows.length; row++) {
+      if (idx<cum+rows[row]) { col = idx-cum; break; }
+      cum += rows[row];
+    }
+    return { id: idx+1, type, row, col };
+  });
+  const adj = id => {
+    const t = nodes[id-1];
+    const dirs = (t.row % 2===0) ? directionsEven : directionsOdd;
+    return dirs
+      .map(d=> nodes.find(n=> n.row===t.row+d.dr && n.col===t.col+d.dc))
+      .filter(n=> n);
+  };
+  return nodes
+    .filter(n=>n.type==='slum')
+    .every(n=>{
+      const cnt = adj(n.id).filter(m=> m.type==='slum').length;
+      return cnt >= 2;
+    });
+}
 
 const cardPoolData = [
   { name:'淨水站', rarity:'普通', label:'河流',     baseProduce:4, specialAbility:'若相鄰地塊有河流地塊，則產出 +1' ,type:'building' },
@@ -94,6 +156,24 @@ let tileMap = [];
 function showEndScreen(msg) {
   document.getElementById('end-title').innerText = msg;
   document.getElementById('end-screen').style.display = 'flex';
+}
+
+// 每次啟動或重開遊戲時呼叫
+function generateInitialTileTypes() {
+  const base = [
+    ...Array(5).fill('city'),
+    ...Array(8).fill('slum'),
+    ...Array(6).fill('river'),
+    ...Array(12).fill('wasteland')
+  ];
+  let types;
+  do {
+    types = shuffle([...base]);
+  } while (
+    !isRiverLayoutValid(types) ||
+    !isSlumLayoutValid(types)
+  );
+  return types;
 }
 
 // 重置所有狀態並重新開始
@@ -192,12 +272,17 @@ function createTileMap31(){
   rows.forEach((count, r) => {
     for (let c = 0; c < count; c++, id++) {
       map.push({
-        id, row:r, col:c,
-        type:typeMapping[id],
-        buildingProduce:0,
-        buildingPlaced:false,
-        slumBonusGranted:false,
-        adjacency:[], x:0, y:0
+        id,
+        row: r,
+        col: c,
+        // 從 initialTileTypes 拿對應位置的類型
+        type: initialTileTypes[id - 1],
+        buildingProduce: 0,
+        buildingPlaced: false,
+        slumBonusGranted: false,
+        adjacency: [],
+        x: 0,
+        y: 0
       });
     }
   });
@@ -403,6 +488,186 @@ function simulateTotalDiff(tileId) {
   return updated - original;
 }
 
+/**
+ * 返回一個對象：{ tileId: diff, … }
+ * diff = 新的 buildingProduce（含地塊/標籤/特性加成）− 舊的 buildingProduce
+ */
+function simulateTileDiffs(tileId) {
+  // 1) 記錄舊的 buildingProduce
+  const originalProduces = {};
+  tileMap.forEach(t => { originalProduces[t.id] = t.buildingProduce; });
+
+  // 2) 複製地圖並放上新卡
+  const cloneMap = tileMap.map(t => ({
+    ...t,
+    adjacency: [...t.adjacency]
+  }));
+  const target = cloneMap.find(t => t.id === +tileId);
+  target.buildingPlaced      = true;
+  target.buildingBaseProduce = draggingCardInfo.baseProduce;
+  target.buildingLabel       = draggingCardInfo.label;
+  target.buildingName        = draggingCardInfo.name;
+
+  // 3) 重算 cloneMap 上每格的 buildingProduce
+  //  3.1 地塊＋標籤＋荒原扣除
+  cloneMap.forEach(t => {
+    if (!t.buildingPlaced) return;
+    let pv = t.buildingBaseProduce;
+    if (t.type === 'city') {
+      pv += 2 + (t.buildingLabel === '繁華區' ? 4 : 0);
+    } else if (t.type === 'river') {
+      pv += -1 + (t.buildingLabel === '河流' ? 3 : 0);
+    }
+    if (t.buildingLabel === '荒原' && t.type !== 'wasteland') {
+      pv -= 2;
+    }
+    t.buildingProduce = pv;
+  });
+
+  //  3.2 slum 群聚
+  {
+    const visited = new Set();
+    cloneMap.forEach(t => {
+      if (!t.buildingPlaced || t.type !== 'slum' || visited.has(t.id)) return;
+      const queue = [t.id], cluster = [];
+      while (queue.length) {
+        const id = queue.shift();
+        if (visited.has(id)) continue;
+        visited.add(id);
+        const ct = cloneMap.find(x => x.id === id);
+        if (ct && ct.buildingPlaced && ct.type === 'slum') {
+          cluster.push(ct);
+          ct.adjacency.forEach(nid => queue.push(nid));
+        }
+      }
+      if (cluster.length >= 3) {
+        cluster.forEach(x => x.buildingProduce++);
+      }
+    });
+  }
+
+  //  3.3 slum 相鄰貧民窟
+  cloneMap.forEach(t => {
+    if (!t.buildingPlaced || t.type !== 'slum' || t.buildingLabel !== '貧民窟') return;
+    const adjCount = t.adjacency
+      .map(id => cloneMap.find(x => x.id === id))
+      .filter(x => x && x.buildingPlaced).length;
+    t.buildingProduce += Math.min(adjCount, 5);
+  });
+
+  //  3.4 其它 specialAbility（照 recalcRevenueFromScratch 內那段搬過來）
+  cloneMap.forEach(t => {
+    if (!t.buildingPlaced) return;
+    // 淨水站
+    if (t.buildingName === '淨水站') {
+      const hasRiver = t.adjacency.some(id => {
+        const nt = cloneMap.find(x => x.id === id);
+        return nt && nt.type === 'river';
+      });
+      if (hasRiver) t.buildingProduce++;
+    }
+    // 星軌會館
+    if (t.buildingName === '星軌會館') {
+      const hasNeighbor = t.adjacency.some(id => {
+        const nt = cloneMap.find(x => x.id === id);
+        return nt && nt.buildingPlaced;
+      });
+      if (!hasNeighbor) t.buildingProduce += 2;
+    }
+    // 社群站
+    if (t.buildingName === '社群站') {
+      const hasNeighbor = t.adjacency.some(id => {
+        const nt = cloneMap.find(x => x.id === id);
+        return nt && nt.buildingPlaced;
+      });
+      if (hasNeighbor) t.buildingProduce++;
+    }
+    // 彈出商亭
+    if (t.buildingName === '彈出商亭') {
+      const row = t.row, col = t.col;
+      const lastRow = rows.length - 1, rowCount = rows[row];
+      if (row === 0 || row === lastRow || col === 0 || col === rowCount - 1) {
+        t.buildingProduce++;
+      }
+    }
+    // 地脈節點
+    if (t.buildingName === '地脈節點') {
+      const nei = t.adjacency
+        .map(id => cloneMap.find(x => x.id === id))
+        .filter(x => x && x.buildingPlaced);
+      if (nei.length === 2) {
+        t.buildingProduce++;
+        nei.forEach(x => x.buildingProduce++);
+      }
+    }
+    // 匯聚平臺
+    if (t.buildingName === '匯聚平臺') {
+      const cnt = t.adjacency
+        .map(id => cloneMap.find(x => x.id === id))
+        .filter(x => x && x.buildingPlaced).length;
+      if (cnt > 3) t.buildingProduce += 2;
+    }
+    // 流動站
+    if (t.buildingName === '流動站' && t.type === 'river') {
+      t.adjacency.forEach(id => {
+        const x = cloneMap.find(y => y.id === id);
+        if (x && x.buildingPlaced && x.type === 'river') {
+          x.buildingProduce++;
+        }
+      });
+    }
+    // 焚料方艙
+    if (t.buildingName === '焚料方艙' && currentRound % 2 === 0) {
+      t.buildingProduce = Math.max(t.buildingProduce - 1, 4);
+    }
+    // 灣岸輸能站
+    if (t.buildingName === '灣岸輸能站' && t.type !== 'river') {
+      t.buildingProduce--;
+    }
+    // 垂直農倉
+    if (t.buildingName === '垂直農倉') {
+      const cnt = t.adjacency
+        .map(id => cloneMap.find(x => x.id === id))
+        .filter(x => x && x.buildingPlaced && x.buildingName === '垂直農倉')
+        .length;
+      t.buildingProduce += Math.min(cnt, 2);
+    }
+    // 通訊樞紐
+    if (t.buildingName === '通訊樞紐') {
+      if (t.type === 'city') t.buildingProduce += 4;
+      if (t.type === 'slum') {
+        const cnt = t.adjacency
+          .map(id => cloneMap.find(x => x.id === id))
+          .filter(x => x && x.buildingPlaced).length;
+        t.buildingProduce += cnt;
+      }
+      if (t.type === 'river') t.buildingProduce += 3;
+    }
+  });
+
+ // 3.5 —— 新增：科技加成 —— 
+  const wuluDef  = techDefinitions['廢物利用'];
+  const dijiaDef = techDefinitions['地價升值'];
+  cloneMap.forEach(t => {
+     if (!t.buildingPlaced) return;
+     if (wuluDef && t.type === 'wasteland') {
+       t.buildingProduce += wuluDef.perLevel * wuluDef.count;
+     }
+     if (dijiaDef && t.type === 'city') {
+       t.buildingProduce += dijiaDef.perLevel * dijiaDef.count;
+     }
+   });  // ← 這行不要忘記！
+
+  // 4) 計算 diff 並回傳
+  const diffs = {};
+  cloneMap.forEach(t => {
+    diffs[t.id] = t.buildingPlaced
+      ? t.buildingProduce - originalProduces[t.id]
+      : 0;
+  });
+  return diffs;
+}
+
 // 將地圖渲染到畫面
 function initMapArea(){
   const mapArea = document.getElementById('map-area');
@@ -568,7 +833,7 @@ function initMapArea(){
   if (!draggingCardInfo) return;
   e.preventDefault();
   clearPreviews();
-  showPreviews();
+  showPreviews(hex.dataset.tileId);
   // 顯示左上角總影響
   const diff = simulateTotalDiff(hex.dataset.tileId);
   const pd = document.getElementById('preview-diff');
@@ -585,46 +850,54 @@ function initMapArea(){
 
 // 刪除所有舊的預覽數字（body 底下的 .preview-label）
 function clearPreviews() {
+  // 1) 刪掉所有舊的 preview-label
   document.querySelectorAll('.preview-label').forEach(el => el.remove());
-  // 同步隱藏左上角那個
-  document.getElementById('preview-diff').style.display = 'none';
-  // 還原所有空地的「?」
-   tileMap.forEach(t => {
-     if (!t.buildingPlaced) {
-       const hex = document.querySelector(`[data-tile-id="${t.id}"]`);
-       if (hex) hex.textContent = '?';
-     }
-   });
-}
 
-// 在 body 底下依照每個 hex 的真實畫面座標生成 .preview-label
-function showPreviews() {
-  // 先隱藏所有空地上的「?」
-   tileMap.forEach(t => {
-     if (!t.buildingPlaced) {
-       const hex = document.querySelector(`[data-tile-id="${t.id}"]`);
-       if (hex) hex.textContent = '';
-     }
-   });
-  
+  // 2) 隱藏左上角總影響
+  document.getElementById('preview-diff').style.display = 'none';
+
+  // 3) 只在「真的沒建築」的空地上還原問號
   tileMap.forEach(t => {
     const hex = document.querySelector(`[data-tile-id="${t.id}"]`);
-    if (!hex) return;
-    const diff = simulateTotalDiff(t.id);
+    if (!t.buildingPlaced && hex) hex.textContent = '?';
+    });
+}
 
-    // 1) 取得畫面座標
+function showPreviews(dropTileId) {
+  // 1) 计算每个格子的 diff
+  const diffs = simulateTileDiffs(dropTileId);
+
+  // 2) 对于 diff ≠ 0 的才显示
+  Object.entries(diffs).forEach(([id, diff]) => {
+    if (diff === 0) return;           // 只关心有变化的
+
+    const hex = document.querySelector(`[data-tile-id="${id}"]`);
+    if (!hex) return;
+
+    // 隐藏问号
+    hex.textContent = '';
+
+    // 获得位置
     const r = hex.getBoundingClientRect();
-    // 2) 建立固定定位的 label
+
+    // 创建并展示 label
     const lbl = document.createElement('div');
     lbl.className = 'preview-label';
     lbl.innerText = (diff > 0 ? '+' + diff : diff);
-    lbl.style.color = diff > 0 ? '#39ff14'
-                     : diff < 0 ? 'red'
-                     : 'black';
+    lbl.style.color = diff > 0 ? '#39ff14' : 'red';  // 亮绿或红
     lbl.style.left = (r.left + r.width/2) + 'px';
     lbl.style.top  = (r.top  + r.height/2) + 'px';
     document.body.appendChild(lbl);
   });
+
+  // 左上角总影响也要改成基于 diffs 的总和（可选）
+  const totalDiff = Object.values(diffs).reduce((s,n)=>s+n,0);
+  const pd = document.getElementById('preview-diff');
+  if (totalDiff !== 0) {
+    pd.innerText = totalDiff > 0 ? ` (+${totalDiff})` : ` (${totalDiff})`;
+    pd.style.color   = totalDiff > 0 ? 'green' : 'red';
+    pd.style.display = 'inline';
+  }
 }
 
 // 更新 UI 顯示
@@ -1101,6 +1374,9 @@ function updateTechTree() {
 
 // window.onload 初始化
 window.onload = () => {
+  // 每次重新載入或重開，先生成一次地塊
+  initialTileTypes = generateInitialTileTypes();
+  
   // DOM 參考
   const startScreen = document.getElementById('start-screen');
   const startBtn    = document.getElementById('startBtn');
