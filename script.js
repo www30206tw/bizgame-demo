@@ -12,6 +12,16 @@ let lastPlacement = null;
 let draggingCardInfo = null;
 let dragOverlay = null;
 let initialTileTypes = [];
+let selectedItem = null;
+let itemOnCooldown = 0;
+let itemPicked = false;  // 是否已選過一次
+
+// —— 新增道具系統變數 —— 
+const itemDefinitions = [
+  { id:'support',    name:'呼叫支援',    cooldown:5, ability:'立即獲得100金幣' },
+  { id:'hydro',      name:'水力資源',    cooldown:3, ability:'本回合河流地塊產出翻倍' },
+  { id:'wasteland',  name:'荒地建設',    cooldown:4, ability:'隨機獲得一個荒原建築' },
+];
 
 const rows = [4,5,4,5,4,5,4];
 
@@ -363,14 +373,14 @@ function calculateRevenue(map) {
     // ……（把 recalcRevenueFromScratch 里对应的那一大段 specialAbility 逻辑全部复制到这里，针对 clone 而非全局）……
     if (t.buildingName === '淨水站') {
        const hasRiverNeighbor = t.adjacency.some(id => {
-        const nt = tileMap.find(x => x.id === id);
+        const nt = clone.find(x => x.id === id);
         return nt && nt.type === 'river';
       });
       if (hasRiverNeighbor) t.buildingProduce++;
    }
     if(t.buildingName==='星軌會館'){
        const hasN = t.adjacency.some(id=>{
-        const nt=tileMap.find(x=>x.id===id);
+        const nt=clone.find(x=>x.id===id);
         return nt&&nt.buildingPlaced;
       });
       if(!hasN) t.buildingProduce+=2;
@@ -378,7 +388,7 @@ function calculateRevenue(map) {
     // 社群站：若與至少 1 座其他建築相鄰，額外 +1
    if(t.buildingName==='社群站'){
        const hasNeighbor = t.adjacency.some(id=>{
-       const nt=tileMap.find(x=>x.id===id);
+       const nt=clone.find(x=>x.id===id);
        return nt&&nt.buildingPlaced;
      });
      if(hasNeighbor) t.buildingProduce++;
@@ -395,7 +405,7 @@ function calculateRevenue(map) {
   // 地脈節點：若相鄰建築恰為2，則包含自己在內的3座每座+1
    if(t.buildingName==='地脈節點'){
      const nei = t.adjacency
-       .map(id=>tileMap.find(x=>x.id===id))
+       .map(id=>clone.find(x=>x.id===id))
        .filter(x=>x && x.buildingPlaced);
      if(nei.length===2){
        t.buildingProduce++;
@@ -405,7 +415,7 @@ function calculateRevenue(map) {
   // 匯聚平臺：若與3座以上建築相鄰，額外+2
    if(t.buildingName==='匯聚平臺'){
      const cnt = t.adjacency
-       .map(id=>tileMap.find(x=>x.id===id))
+       .map(id=>clone.find(x=>x.id===id))
        .filter(x=>x && x.buildingPlaced)
        .length;
      if(cnt>3) t.buildingProduce+=2;
@@ -413,7 +423,7 @@ function calculateRevenue(map) {
   // 流動站：若自身在河流上，相鄰且也在河流的建築每座+1
    if(t.buildingName==='流動站' && t.type==='river'){
      t.adjacency.forEach(id=>{
-       const x=tileMap.find(y=>y.id===id);
+       const x=clone.find(y=>y.id===id);
        if(x && x.buildingPlaced && x.type==='river'){
          x.buildingProduce++;
        }
@@ -432,7 +442,7 @@ function calculateRevenue(map) {
   // 垂直農倉：每有 1 座鄰接的垂直農倉，+1（金幣），最多 +2
   if (t.buildingName === '垂直農倉') {
     const neiCount = t.adjacency.filter(id => {
-      const nt = tileMap.find(x => x.id === id);
+      const nt = clone.find(x => x.id === id);
       return nt && nt.buildingPlaced && nt.buildingName === '垂直農倉';
     }).length;
     t.buildingProduce += Math.min(neiCount, 2);
@@ -444,7 +454,7 @@ function calculateRevenue(map) {
     // 貧民窟標籤：蓋在貧民窟時，相鄰每座建築 +1
     if (t.type === 'slum') {
       const adjCount = t.adjacency.filter(id => {
-        const nt = tileMap.find(x => x.id === id);
+        const nt = clone.find(x => x.id === id);
         return nt && nt.buildingPlaced;
       }).length;
       t.buildingProduce += adjCount;
@@ -856,11 +866,18 @@ function clearPreviews() {
   // 2) 隱藏左上角總影響
   document.getElementById('preview-diff').style.display = 'none';
 
-  // 3) 只在「真的沒建築」的空地上還原問號
+  // 3) 所有格子重置顯示：如果有建築，顯示名稱；沒有則顯示 '?'
   tileMap.forEach(t => {
     const hex = document.querySelector(`[data-tile-id="${t.id}"]`);
-    if (!t.buildingPlaced && hex) hex.textContent = '?';
-    });
+    if (!hex) return;
+    if (t.buildingPlaced) {
+      // 恢復已放的建築名稱
+      hex.innerHTML = `<div class="hex-name">${t.buildingName}</div>`;
+    } else {
+      // 恢復空地的問號
+      hex.textContent = '?';
+    }
+  });
 }
 
 function showPreviews(dropTileId) {
@@ -931,6 +948,16 @@ function updateStageBar() {
     if (diff > 0) warningNextRoundShown = false;
   } else {
     bar.textContent = '';
+  }
+  
+  // 新增：道具倒數計時
+  const cdEl = document.getElementById('item-countdown');
+  // 如果還沒領道具，且還沒到第6回合，就顯示倒數
+  if (!itemPicked && currentRound < 6) {
+    const turns = 6 - currentRound;
+    cdEl.innerText = `${turns} 回合後可以獲得道具`;
+  } else {
+    cdEl.innerText = '';
   }
 }
 
@@ -1303,6 +1330,16 @@ function recalcRevenueFromScratch(){
     if (t.type === 'river') t.buildingProduce += 3;
   }
   });
+
+   // —— 新增：水力资源道具生效 —— 
+  tileMap.forEach(t => {
+    if (window.hydroActive && t.type === 'river') {
+      t.buildingProduce *= 2;
+    }
+  });
+  // 用完就清掉 flag，下一回合失效
+  window.hydroActive = false;
+  
   // 5. 累加
   tileMap.forEach(t => {
     if (!t.buildingPlaced) return;
@@ -1338,12 +1375,102 @@ document.getElementById('warning-close-btn').onclick = () => {
 
 // 啟動 Draw
 function startDrawPhase(){
+
+  // —— 在第6回合（玩家已付第一次費用後下一回合）插入道具選擇
+  if (currentRound === 6 && !itemPicked) {
+    // 建立 3 張道具卡
+    const pool = document.getElementById('item-pool');
+    pool.innerHTML = '';
+    itemDefinitions.forEach(it => {
+      const div = document.createElement('div');
+      div.className = 'item-card';
+      div.dataset.id = it.id;
+      div.innerHTML = `<h3>${it.name}</h3><p>冷卻：${it.cooldown} 回合</p><p>${it.ability}</p>`;
+      div.onclick = ()=> {
+        pool.querySelectorAll('.item-card').forEach(c=>c.classList.remove('selected'));
+        div.classList.add('selected');
+      };
+      pool.appendChild(div);
+    });
+    document.getElementById('item-select-modal').style.display = 'flex';
+    return;  // 停在道具選擇
+  }
+  // —— 原本流程 —— 
   refreshCount = 0;
   updateRefreshButton();
   document.getElementById('draw-section').style.display='flex';
   document.getElementById('show-draw-btn').style.display = 'none';
   drawCards();
   updateStageBar();
+}
+
+// 道具使用
+function renderItemIcon(){
+  const ctn = document.getElementById('item-icon-container');
+  ctn.innerHTML = '';  // 清空
+  if (!selectedItem) return;
+  const ico = document.createElement('div');
+  ico.className = 'item-icon';
+  ico.id = 'item-icon';
+  ico.innerText = selectedItem.name;    // 顯示完整道具名稱
+  ico.onclick = showItemUseModal;
+  ctn.appendChild(ico);
+  // 一加入就把「(可使用)」或冷卻層覆蓋顯示出來
+  updateItemCooldownDisplay();
+}
+
+function showItemUseModal(){
+  if (!selectedItem) return;
+  const msg = `${selectedItem.name}\n${selectedItem.ability}\n\n是否使用？\n(冷卻中：${itemOnCooldown||0} 回)`;
+  if (itemOnCooldown > 0) {
+    alert(`${selectedItem.name} 冷卻中，剩餘 ${itemOnCooldown} 回合`);
+    return;
+  }
+  if (confirm(msg)) {
+    useItem();
+  }
+}
+
+function useItem(){
+  switch(selectedItem.id){
+    case 'support':
+      currentGold += 100;
+      updateResourceDisplay();
+      break;
+    case 'hydro':
+      // 設一個 flag，讓本回合河流加成翻倍
+      window.hydroActive = true;
+      recalcRevenueFromScratch();
+      break;
+    case 'wasteland':
+      // 隨機抽一張 label='荒原' 的建築到手牌
+      const pool = cardPoolData.filter(c=>c.label==='荒原' && c.type==='building');
+      const pick = pool[Math.floor(Math.random()*pool.length)];
+      document.getElementById('hand').appendChild(createBuildingCard(pick));
+      break;
+  }
+  itemOnCooldown = selectedItem.cooldown;
+  document.getElementById('item-icon').classList.add('cooldown');
+  updateItemCooldownDisplay();
+}
+
+function updateItemCooldownDisplay(){
+  const ico = document.getElementById('item-icon');
+   // 先全清除：舊的倒數與「可使用」
+   ico?.querySelectorAll('.cooldown-overlay, .item-usable').forEach(el=>el.remove());
+   if (!ico) return;
+   if (itemOnCooldown > 0) {
+     const ov = document.createElement('div');
+     ov.className = 'cooldown-overlay';
+     ov.innerText = itemOnCooldown;
+     ico.appendChild(ov);
+   } else {
+     // 冷卻結束：顯示「(可使用)」
+     const u = document.createElement('div');
+     u.className = 'item-usable';
+     u.innerText = '(可使用)';
+     ico.appendChild(u);
+   }
 }
 
 // 顯示科技樹 Modal
@@ -1376,6 +1503,18 @@ function updateTechTree() {
 window.onload = () => {
   // 每次重新載入或重開，先生成一次地塊
   initialTileTypes = generateInitialTileTypes();
+
+  // 道具選擇 Modal 的確認按鈕
+  document.getElementById('confirm-item-btn').onclick = () => {
+    const sel = document.querySelector('#item-pool .item-card.selected');
+    if (!sel) { alert('請選擇一張道具'); return; }
+    selectedItem = itemDefinitions.find(i=>i.id===sel.dataset.id);
+    itemPicked = true;
+    document.getElementById('item-select-modal').style.display = 'none';
+    renderItemIcon();
+    // 選完才開始抽卡
+    startDrawPhase();
+  };
   
   // DOM 參考
   const startScreen = document.getElementById('start-screen');
@@ -1495,7 +1634,15 @@ window.onload = () => {
   // 3. 回合 +1 並更新顯示
   currentRound++;
   updateRoundDisplay();
-  // 4. 開始下一輪抽卡
+  // 4.道具冷卻倒數
+  if (selectedItem && itemOnCooldown>0) {
+    itemOnCooldown--;
+    if (itemOnCooldown===0) {
+      document.getElementById('item-icon').classList.remove('cooldown');
+    }
+    updateItemCooldownDisplay();
+  }
+  // 5. 開始下一輪抽卡
   // 開始新回合時，清除撤銷記錄
   lastPlacement = null;
   document.getElementById('undo-btn').disabled = true;

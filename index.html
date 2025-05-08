@@ -25,8 +25,19 @@
       <div class="center-info">
         <div class="round-info">回合數：<span id="round-number">1</span></div><br />
         <div class="stage-bar" id="stage-bar">時間軸</div>
+         <!-- 新增：道具倒數計時顯示 -->
+         <div id="item-countdown" style="margin-top:4px; color:#333;"></div>
       </div>
     </div>
+
+    <!-- 道具選擇 Modal（第6回合前彈出，一局僅一次） -->
+   <div id="item-select-modal" class="warning-modal" style="display:none; z-index:1004;">
+     <div class="warning-content">
+       <h2>選擇你的道具</h2>
+       <div class="item-pool" id="item-pool" style="display:flex; gap:12px; justify-content:center; margin:16px 0;"></div>
+       <button id="confirm-item-btn">確定</button>
+     </div>
+   </div>
 
     <!-- 抽卡區塊 (5 張卡牌，選 2) -->
     <div id="draw-section">
@@ -76,6 +87,8 @@
 
       <!-- 中間：地塊區 -->
       <div class="map-area" id="map-area"></div>
+      <!-- 新增：把道具圖示放到 map-area 裡 -->
+         <div id="item-icon-container" style="position:absolute; top:10px; right:10px; z-index:200;"></div>
 
       <!-- 右側：撤銷按鈕 + 懸浮窗容器 -->
       <div class="sidebar">
