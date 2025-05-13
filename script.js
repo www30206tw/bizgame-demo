@@ -363,7 +363,7 @@ function calculateRevenue(map) {
     if(!t.buildingPlaced||t.type!=='slum'||t.buildingLabel!=='貧民窟') return;
     const adjCount = t.adjacency
       .map(id=>clone.find(x=>x.id===id))
-      .filter(x=>x&&x.buildingPlaced).length;
+      .filter(x=>x&&x.buildingPlaced&&x.buildingLabel==='貧民窟').length;
     t.buildingProduce += Math.min(adjCount,5);
   });
 
@@ -561,7 +561,7 @@ function simulateTileDiffs(tileId) {
     if (!t.buildingPlaced || t.type !== 'slum' || t.buildingLabel !== '貧民窟') return;
     const adjCount = t.adjacency
       .map(id => cloneMap.find(x => x.id === id))
-      .filter(x => x && x.buildingPlaced).length;
+      .filter(x => x && x.buildingPlaced && x.buildingLabel === '貧民窟').length;
     t.buildingProduce += Math.min(adjCount, 5);
   });
 
@@ -655,18 +655,16 @@ function simulateTileDiffs(tileId) {
     }
   });
 
- // 3.5 —— 新增：科技加成 —— 
-  const wuluDef  = techDefinitions['廢物利用'];
-  const dijiaDef = techDefinitions['地價升值'];
-  cloneMap.forEach(t => {
-     if (!t.buildingPlaced) return;
-     if (wuluDef && t.type === 'wasteland') {
-       t.buildingProduce += wuluDef.perLevel * wuluDef.count;
-     }
-     if (dijiaDef && t.type === 'city') {
-       t.buildingProduce += dijiaDef.perLevel * dijiaDef.count;
-     }
-   });  // ← 這行不要忘記！
+ // —— 新增：單格科技加成 —— 
+   // 只對目標 target 這一格套用科技效果，其它 cloneMap 格子不加
+   const wuluDef  = techDefinitions['廢物利用'];
+   const dijiaDef = techDefinitions['地價升值'];
+   if (wuluDef && target.type === 'wasteland') {
+     target.buildingProduce += wuluDef.perLevel * wuluDef.count;
+   }
+   if (dijiaDef && target.type === 'city') {
+     target.buildingProduce += dijiaDef.perLevel * dijiaDef.count;
+   }
 
   // 4) 計算 diff 並回傳
   const diffs = {};
@@ -844,14 +842,6 @@ function initMapArea(){
   e.preventDefault();
   clearPreviews();
   showPreviews(hex.dataset.tileId);
-  // 顯示左上角總影響
-  const diff = simulateTotalDiff(hex.dataset.tileId);
-  const pd = document.getElementById('preview-diff');
-  if (diff !== 0) {
-    pd.innerText = diff > 0 ? ` (+${diff})` : ` (${diff})`;
-    pd.style.color   = diff > 0 ? 'green' : 'red';
-    pd.style.display = 'inline';
-   }
   });
 
      mapArea.appendChild(hex);
@@ -914,7 +904,8 @@ function showPreviews(dropTileId) {
     pd.innerText = totalDiff > 0 ? ` (+${totalDiff})` : ` (${totalDiff})`;
     pd.style.color   = totalDiff > 0 ? 'green' : 'red';
     pd.style.display = 'inline';
-  }
+   } else {
+    pd.style.display = 'none';}
 }
 
 // 更新 UI 顯示
@@ -1119,7 +1110,9 @@ function skipDraw(){
   document.getElementById('draw-section').style.display='none';
 }
 function confirmDraw(){
-  const selected = Array.from(document.querySelectorAll('.card.selected'));
+  const selected = Array.from(
+    document.querySelectorAll('#card-pool .card.selected')
+  );
    // 嚴格要求「等於 2 張」才能通過
   if (selected.length !== 2) {
     alert('請選擇兩張卡！');
@@ -1230,7 +1223,8 @@ function recalcRevenueFromScratch(){
     if(!t.buildingPlaced||t.type!=='slum'||t.buildingLabel!=='貧民窟') return;
     const adjCount = t.adjacency.filter(id=>{
       const nt=tileMap.find(x=>x.id===id);
-      return nt&&nt.buildingPlaced;
+      // 只計算標籤也是「貧民窟」的相鄰建築
+    return nt && nt.buildingPlaced && nt.buildingLabel === '貧民窟';
     }).length;
     t.buildingProduce += Math.min(adjCount,5);
   });
@@ -1331,34 +1325,28 @@ function recalcRevenueFromScratch(){
   }
   });
 
-   // —— 新增：水力资源道具生效 —— 
-  tileMap.forEach(t => {
-    if (window.hydroActive && t.type === 'river') {
-      t.buildingProduce *= 2;
-    }
-  });
-  // 用完就清掉 flag，下一回合失效
-  window.hydroActive = false;
-  
-  // 5. 累加
+  // 5. 累加（把水力資源的翻倍只臨時套用，不改 buildingProduce）
+  const wuluDef  = techDefinitions['廢物利用'];
+  const dijiaDef = techDefinitions['地價升值'];
   tileMap.forEach(t => {
     if (!t.buildingPlaced) return;
-    // 先拿原本計算好的建築產出
     let val = t.buildingProduce;
-    // 「廢物利用」：荒原地塊每等級 + perLevel 金幣
-    // 「地價升值」：僅對繁華區地塊，每等級 + perLevel 金幣
-    const wuluDef = techDefinitions['廢物利用'];
-    const dijiaDef = techDefinitions['地價升值'];
-    
-    if (wuluDef && t.type === 'wasteland') {
-    val += wuluDef.perLevel * wuluDef.count;
+    // 水力資源：河流地塊當回合產出翻倍
+    if (window.hydroActive && t.type === 'river') {
+      val *= 2;
     }
-    
+    // 科技加成
+    if (wuluDef && t.type === 'wasteland') {
+      val += wuluDef.perLevel * wuluDef.count;
+    }
     if (dijiaDef && t.type === 'city') {
-    val += dijiaDef.perLevel * dijiaDef.count;
+      val += dijiaDef.perLevel * dijiaDef.count;
     }
     total += val;
   });
+  // 用完就清掉 flag，下一回合失效
+  window.hydroActive = false;
+
   roundRevenue = total;
   updateResourceDisplay();
 }
@@ -1382,16 +1370,20 @@ function startDrawPhase(){
     const pool = document.getElementById('item-pool');
     pool.innerHTML = '';
     itemDefinitions.forEach(it => {
-      const div = document.createElement('div');
-      div.className = 'item-card';
-      div.dataset.id = it.id;
-      div.innerHTML = `<h3>${it.name}</h3><p>冷卻：${it.cooldown} 回合</p><p>${it.ability}</p>`;
-      div.onclick = ()=> {
-        pool.querySelectorAll('.item-card').forEach(c=>c.classList.remove('selected'));
-        div.classList.add('selected');
-      };
-      pool.appendChild(div);
-    });
+    const div = document.createElement('div');
+    div.className = 'card item-card';        // 加上 .card 即可套用原本卡牌樣式
+    div.dataset.id = it.id;
+    div.innerHTML = `
+      <div class="card-name">${it.name}</div>
+      <div class="card-ability">冷卻：${it.cooldown} 回合<br>${it.ability}</div>
+      <div class="card-type">道具</div>
+    `;
+    div.onclick = () => {
+      pool.querySelectorAll('.item-card').forEach(c => c.classList.remove('selected'));
+      div.classList.add('selected');
+    };
+    pool.appendChild(div);
+  });
     document.getElementById('item-select-modal').style.display = 'flex';
     return;  // 停在道具選擇
   }
@@ -1532,6 +1524,8 @@ window.onload = () => {
      const drawSec = document.getElementById('draw-section');
      drawSec.style.display = 'none';
      showDrawBtn.style.display = 'block';
+    // 隱藏抽卡時禁止結束回合
+     document.getElementById('end-turn-btn').disabled = true;
      console.log('hide-draw-btn clicked, draw-section hidden');
    });
  
@@ -1542,6 +1536,8 @@ window.onload = () => {
      const drawSec = document.getElementById('draw-section');
      drawSec.style.display = 'flex';
      showDrawBtn.style.display = 'none';
+    // 顯示抽卡時恢復結束回合
+     document.getElementById('end-turn-btn').disabled = false;
      console.log('show-draw-btn clicked, draw-section shown');
    });
 
@@ -1603,6 +1599,11 @@ window.onload = () => {
   document.getElementById('tech-button').onclick    = showTechModal;
   document.getElementById('close-tech-btn').onclick = hideTechModal;
   endTurnBtn.onclick = () => {
+  // —— 如果有道具且冷卻歸零，先跳確認框 —— 
+    if (selectedItem && itemOnCooldown === 0) {
+      const ok = confirm('目前還有可使用的道具，是否結束回合？');
+      if (!ok) return;  // 取消結束回合，留在本回合
+    }
   // 1. 直接把「回合收益」加給玩家
   currentGold += roundRevenue;
   updateResourceDisplay();
