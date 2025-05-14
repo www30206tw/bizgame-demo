@@ -15,6 +15,8 @@ let initialTileTypes = [];
 let selectedItem = null;
 let itemOnCooldown = 0;
 let itemPicked = false;  // 是否已選過一次
+let nextEventRound = null;
+let currentEvent = null;
 
 // —— 新增道具系統變數 —— 
 const itemDefinitions = [
@@ -22,6 +24,48 @@ const itemDefinitions = [
   { id:'hydro',      name:'水力資源',    cooldown:3, ability:'本回合河流地塊產出翻倍' },
   { id:'wasteland',  name:'荒地建設',    cooldown:4, ability:'隨機獲得一個荒原建築' },
 ];
+
+// ——— 事件系統 ———
+const eventDefinitions = [
+  {
+    id: 'wastelandSandstorm',
+    name: '荒原沙暴',
+    outcomes: [
+      { range: [1,2], text: '本回合所有荒原建築產出為0',
+        effect: () => { window.sandstormActive = true; } },
+      { range: [3,4], text: '立即獲得50金幣',
+        effect: () => { currentGold += 50; updateResourceDisplay(); } },
+      { range: [5,6], text: '立即獲得2張隨機的荒原建築',
+        effect: () => {
+          for (let i=0; i<2; i++) {
+            const pool = cardPoolData.filter(c=>c.label==='荒原'&&c.type==='building');
+            const pick = pool[Math.floor(Math.random()*pool.length)];
+            document.getElementById('hand').appendChild(createBuildingCard(pick));
+          }
+        }
+      }
+    ]
+  }
+];
+
+/**
+ * 随机安排下一次事件：
+ *  - 到下一个回合 (3~6 回合后)，且不与收取金币回合冲突
+ *  - 随机选一个事件赋给 currentEvent
+ */
+function scheduleNextEvent(round) {
+  let offset, candidate;
+  do {
+    offset    = Math.floor(Math.random() * 4) + 3;  // 3~6
+    candidate = round + offset;
+  } while (paymentSchedule[candidate] !== undefined);
+
+  nextEventRound = candidate;
+  // 随机挑一个事件
+  currentEvent   = eventDefinitions[
+    Math.floor(Math.random() * eventDefinitions.length)
+  ];
+}
 
 const rows = [4,5,4,5,4,5,4];
 
@@ -196,6 +240,13 @@ function restartGame() {
   warningNextRoundShown = false;
   lastPlacement = null;
 
+  // —— 新增：重置道具系統 —— 
+  selectedItem    = null;
+  itemOnCooldown  = 0;
+  itemPicked      = false;
+  document.getElementById('item-icon-container').innerHTML = '';
+  document.getElementById('item-countdown').innerText = '';
+
   // 新增：重置科技樹中的已用次數，並更新畫面
   Object.values(techDefinitions).forEach(def => def.count = 0);
   updateTechTree();
@@ -207,6 +258,7 @@ function restartGame() {
   document.getElementById('hand').innerHTML = '手牌（建築）';
 
   // 更新 UI
+  scheduleNextEvent(currentRound);  // ← 新增：重排新一局的事件
   updateRoundDisplay();
   updateResourceDisplay();
   updateStageBar();
@@ -966,6 +1018,17 @@ function updateStageBar() {
   } else {
     cdEl.innerText = '';
   }
+
+  // 新增：事件倒數計時
+  const evEl = document.getElementById('event-countdown');
+  const diffEvt = nextEventRound - currentRound;
+  if (diffEvt > 0) {
+    evEl.innerText = `${diffEvt} 回合後會發生${currentEvent.name}`;
+  } else if (diffEvt === 0) {
+    evEl.innerText = `本回合會發生${currentEvent.name}`;
+  } else {
+    evEl.innerText = '';
+  }
 }
 
 // 建築卡牌生成
@@ -1348,27 +1411,30 @@ function recalcRevenueFromScratch(){
   }
   });
 
-  // 5. 累加（把水力資源的翻倍只臨時套用，不改 buildingProduce）
+  // 5. 累加（考慮沙暴、水力與科技）
   const wuluDef  = techDefinitions['廢物利用'];
   const dijiaDef = techDefinitions['地價升值'];
   tileMap.forEach(t => {
     if (!t.buildingPlaced) return;
     let val = t.buildingProduce;
+    // 荒原沙暴：本回合所有荒原地塊產出 = 0
+    if (window.sandstormActive && t.type === 'wasteland') {
+      val = 0;
+    }
     // 水力資源：河流地塊當回合產出翻倍
     if (window.hydroActive && t.type === 'river') {
       val *= 2;
     }
-    // 科技加成
-    if (wuluDef && t.type === 'wasteland') {
-      val += wuluDef.perLevel * wuluDef.count;
-    }
-    if (dijiaDef && t.type === 'city') {
-      val += dijiaDef.perLevel * dijiaDef.count;
-    }
+    // 科技加成（沙暴時不生效）
+     if (wuluDef && t.type === 'wasteland' && !window.sandstormActive) {
+       val += wuluDef.perLevel * wuluDef.count;
+     }
+    if (dijiaDef && t.type === 'city')     val += dijiaDef.perLevel * dijiaDef.count;
     total += val;
   });
-  // 用完就清掉 flag，下一回合失效
-  window.hydroActive = false;
+  // 清除本回合 flag
+  window.sandstormActive = false;
+  window.hydroActive     = false;
 
   roundRevenue = total;
   updateResourceDisplay();
@@ -1471,21 +1537,28 @@ function useItem(){
 
 function updateItemCooldownDisplay(){
   const ico = document.getElementById('item-icon');
-   // 先全清除：舊的倒數與「可使用」
-   ico?.querySelectorAll('.cooldown-overlay, .item-usable').forEach(el=>el.remove());
-   if (!ico) return;
-   if (itemOnCooldown > 0) {
-     const ov = document.createElement('div');
-     ov.className = 'cooldown-overlay';
-     ov.innerText = itemOnCooldown;
-     ico.appendChild(ov);
-   } else {
-     // 冷卻結束：顯示「(可使用)」
-     const u = document.createElement('div');
-     u.className = 'item-usable';
-     u.innerText = '(可使用)';
-     ico.appendChild(u);
-   }
+  // 先移除舊的倒數文字與提示
+  ico?.querySelectorAll('.cooldown-overlay, .item-usable').forEach(el => el.remove());
+  if (!ico) return;
+
+  if (itemOnCooldown > 0) {
+    // 加回 .cooldown 讓它半透明
+    ico.classList.add('cooldown');
+
+    const ov = document.createElement('div');
+    ov.className = 'cooldown-overlay';
+    ov.innerText = itemOnCooldown;
+    ico.appendChild(ov);
+
+  } else {
+    // 冷卻結束：移除半透明 class，並顯示可用提示
+    ico.classList.remove('cooldown');
+
+    const u = document.createElement('div');
+    u.className = 'item-usable';
+    u.innerText = '(可使用)';
+    ico.appendChild(u);
+  }
 }
 
 // 顯示科技樹 Modal
@@ -1514,10 +1587,88 @@ function updateTechTree() {
   }
 }
 
+ function showEvent() {
+  // 顯示 event-modal
+  document.getElementById('event-title').innerText = currentEvent.name;
+  const opts = document.getElementById('event-options');
+  opts.innerHTML = '';
+  currentEvent.outcomes.forEach(o => {
+    opts.innerHTML += `<p>${o.range[0]}–${o.range[1]}：${o.text}</p>`;
+  });
+  document.getElementById('event-modal').style.display = 'flex';
+}
+
+// 玩家按「抽取」
+document.getElementById('roll-event-btn').onclick = () => {
+  const roll = Math.floor(Math.random()*6) + 1;
+  const outcome = currentEvent.outcomes.find(o => roll >= o.range[0] && roll <= o.range[1]);
+  // 先關閉事件選項
+  document.getElementById('event-modal').style.display = 'none';
+  // 執行效果
+  outcome.effect();
+  // 顯示結果
+  document.getElementById('event-result-text').innerText = `擲骰：${roll} → ${outcome.text}`;
+  document.getElementById('event-result-modal').style.display = 'flex';
+};
+
+// 玩家按「確定」關閉結果
+document.getElementById('event-result-close-btn').onclick = () => {
+  document.getElementById('event-result-modal').style.display = 'none';
+  // 重新排下一次事件，並繼續後面的扣款／下一回合邏輯
+  scheduleNextEvent(currentRound);
+  // 扣款、+1回合、啟抽卡……
+  // （把原本 endTurnBtn.onclick 裡在事件之後的程式碼抽到一支 helper 裡呼叫即可）
+};
+
+// 新增：把「正常的回合結束流程」抽成一支函式
+function finishEndTurn() {
+  // 1. 加回合收益
+  currentGold += roundRevenue;
+  updateResourceDisplay();
+
+  // 2. 扣款、勝利/失敗判斷 (複製原本 endTurnBtn.onclick 裡的這段)
+  if (paymentSchedule[currentRound]) {
+    const cost = paymentSchedule[currentRound];
+    if (currentGold < cost) {
+    // 根據當前回合顯示不同的失敗訊息
+    let msg = '';
+    if (currentRound === 5)      msg = '至少也要付一點錢吧●–●!';
+    else if (currentRound === 10) msg = '下一把會更好>_<';
+    else if (currentRound === 16) msg = '下一把會更好>_<';
+    else if (currentRound === 22) msg = '就差一點了，再努力一下 O口O';
+    else                          msg = '遊戲結束';
+    showEndScreen(msg);
+    return;
+    }
+    currentGold -= cost;
+    updateResourceDisplay();
+    showModal('成功支付金幣!');
+    if (currentRound === 22) { showEndScreen('勝利!!'); return; }
+  }
+
+  // 3. 回合 +1
+  currentRound++;
+  updateRoundDisplay();
+
+  // 4. 道具冷卻倒數（如果有）
+  if (selectedItem && itemOnCooldown > 0) {
+     itemOnCooldown--;
+     updateItemCooldownDisplay();
+   }
+
+  // 5. 重置撤銷
+  lastPlacement = null;
+  document.getElementById('undo-btn').disabled = true;
+
+  // 6. 下一輪抽卡
+  startDrawPhase();
+}
+
 // window.onload 初始化
 window.onload = () => {
   // 每次重新載入或重開，先生成一次地塊
   initialTileTypes = generateInitialTileTypes();
+  scheduleNextEvent(currentRound);    // ← 新增：排定第一個事件
 
   // 道具選擇 Modal 的確認按鈕
   document.getElementById('confirm-item-btn').onclick = () => {
@@ -1529,8 +1680,16 @@ window.onload = () => {
     renderItemIcon();
     // 選完才開始抽卡
     startDrawPhase();
-  };
-  
+   };
+  // **在這裡新增地圖／UI 的初始化**
+  tileMap = createTileMap31();
+  computeAdj();
+  initMapArea();
+  updateRoundDisplay();
+  updateResourceDisplay();
+  updateStageBar();
+ };
+
   // DOM 參考
   const startScreen = document.getElementById('start-screen');
   const startBtn    = document.getElementById('startBtn');
@@ -1583,34 +1742,29 @@ window.onload = () => {
   
   undoBtn.disabled = true;  // 初始關閉
   undoBtn.onclick = () => {
-  if (!lastPlacement) return;
-  // 1. 把地塊上建築移除
-  const tile = tileMap.find(x => x.id === lastPlacement.tileId);
-  tile.buildingPlaced = false;
-  // 額外：清空地塊上的顯示，恢復成「?」
-  document.querySelector(`[data-tile-id="${tile.id}"]`).innerHTML = '?';
-  // 2. 卡牌回手牌
-  const hand = document.getElementById('hand');
-  const card = createBuildingCard(lastPlacement.building);
-  hand.appendChild(card);
-  // 3. 重算收益
-  recalcRevenueFromScratch();
-  // 4. 關閉撤銷
-  lastPlacement = null;
-  undoBtn.disabled = true;
-  };
+     if (!lastPlacement) return;
+     // 1. 把地塊上建築移除
+     const tile = tileMap.find(x => x.id === lastPlacement.tileId);
+     tile.buildingPlaced = false;
+     // 額外：清空地塊上的顯示，恢復成「?」
+     document.querySelector(`[data-tile-id="${tile.id}"]`).innerHTML = '?';
+     // 2. 卡牌回手牌
+     const hand = document.getElementById('hand');
+     const card = createBuildingCard(lastPlacement.building);
+     hand.appendChild(card);
+     // 3. 重算收益
+     recalcRevenueFromScratch();
+     // 如果當回合有沙暴效果，且是荒原建築，將它的產出清 0
+     if (window.sandstormActive && tile.buildingLabel === '荒原') {
+       tile.buildingProduce = 0;
+       window.sandstormActive = false;
+     }
+     // 4. 關閉撤銷
+     lastPlacement = null;
+     undoBtn.disabled = true;
+   };  // ← 这里一定要加上这一行，完整关闭 undoBtn.onclick 的大括号
 
-  // 建立並渲染地圖
-  tileMap = createTileMap31();
-  computeAdj();
-  initMapArea();
-
-  // 初始顯示
-  updateRoundDisplay();
-  updateResourceDisplay();
-  updateStageBar();
-
-  // 事件
+   // ── 綁定「開始遊戲」與「Enter 鍵」 ──
   startBtn.onclick = ()=>{ startScreen.style.display='none'; startDrawPhase(); };
   document.addEventListener('keydown', e=> {
     if(e.key==='Enter'&&startScreen.style.display!=='none'){
@@ -1618,72 +1772,43 @@ window.onload = () => {
       startDrawPhase();
     }
   });
+
+  // ── 綁定「重新開始遊戲」按鈕 ──
+  const restartBtn = document.getElementById('restartBtn');
+  restartBtn.onclick = restartGame;
+
   // ─ 綁定科技樹 Modal 開關 ─
   document.getElementById('tech-button').onclick    = showTechModal;
   document.getElementById('close-tech-btn').onclick = hideTechModal;
-  endTurnBtn.onclick = () => {
-  // —— 如果有道具且冷卻歸零，先跳確認框 —— 
-    if (selectedItem && itemOnCooldown === 0) {
-      const ok = confirm('目前還有可使用的道具，是否結束回合？');
-      if (!ok) return;  // 取消結束回合，留在本回合
-    }
-  // 1. 直接把「回合收益」加給玩家
-  currentGold += roundRevenue;
-  updateResourceDisplay();
-  // 2. 更新 UI（金幣 & 回合收益）
-  if (paymentSchedule[currentRound]) {
-      const cost = paymentSchedule[currentRound];
-      if (currentGold < cost) {
-        // 根據當前回合顯示不同的失敗訊息
-      let msg = '';
-      if (currentRound === 5)      msg = '至少也要付一點錢吧●–●!';
-      else if (currentRound === 10) msg = '下一把會更好>_<';
-      else if (currentRound === 16) msg = '下一把會更好>_<';
-      else if (currentRound === 22) msg = '就差一點了，再努力一下 O口O';
-      else                          msg = '遊戲結束';
-      showEndScreen(msg);
-      return;
-      }
-      // 扣款
-      currentGold -= cost;
-      updateResourceDisplay();
-
-      showModal('成功支付金幣!');
-      // 第16回合支付後即勝利
-      if (currentRound === 22) {
-        showEndScreen('勝利!!');
-        return;
-      }
-    }
-  // 3. 回合 +1 並更新顯示
-  currentRound++;
-  updateRoundDisplay();
-  // 4.道具冷卻倒數
-  if (selectedItem && itemOnCooldown>0) {
-    itemOnCooldown--;
-    if (itemOnCooldown===0) {
-      document.getElementById('item-icon').classList.remove('cooldown');
-    }
-    updateItemCooldownDisplay();
-  }
-  // 5. 開始下一輪抽卡
-  // 開始新回合時，清除撤銷記錄
-  lastPlacement = null;
-  document.getElementById('undo-btn').disabled = true;
-  startDrawPhase();
-};
-
-  // 監聽「重新開始」按鈕
-  document.getElementById('restartBtn').onclick = restartGame;
-  // 監聽 Enter 鍵重啟（只在 end-screen 顯示時觸發）
-  document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && document.getElementById('end-screen').style.display === 'flex') {
-    restartGame();
-  }
-});
   
-  document.getElementById('refresh-btn').onclick = refreshCards;
-};
+  endTurnBtn.onclick = () => {
+    // —— 1. 如果有道具可用，跳確認 —— 
+    if (selectedItem && itemOnCooldown === 0) {
+      if (!confirm('目前還有可使用的道具，是否結束回合？')) return;
+    }
+ 
+    // —— 2. 事件回合檢查 —— 
+    if (currentRound === nextEventRound) {
+      // 更新右上倒數文字為「本回合會發生 XXX 事件」
+      updateStageBar();
+      // 顯示事件選擇介面
+      showEvent();
+      return;  // 中斷，暫不執行正常結束流程
+    }
+ 
+    // —— 3. 正常結束流程 —— 
+    finishEndTurn();
+  };
+
+  document.getElementById('event-result-close-btn').onclick = () => {
+    document.getElementById('event-result-modal').style.display = 'none';
+    scheduleNextEvent(currentRound);
+    // 重新計算本回合產出，讓沙暴效果生效
+    recalcRevenueFromScratch();
+    // 事件做完後，再執行正常的回合結束流程
+    finishEndTurn();
+  };
+
 
 document.addEventListener('drag', e => {
   if (!dragOverlay) return;
