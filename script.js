@@ -17,6 +17,8 @@ let itemOnCooldown = 0;
 let itemPicked = false;  // 是否已選過一次
 let nextEventRound = null;
 let currentEvent = null;
+let eventBonusUsed = false;
+let eventBonus     = 0;
 
 // —— 新增道具系統變數 —— 
 const itemDefinitions = [
@@ -31,19 +33,55 @@ const eventDefinitions = [
     id: 'wastelandSandstorm',
     name: '荒原沙暴',
     outcomes: [
-      { range: [1,2], text: '本回合所有荒原建築產出為0',
+      { range: [1,30], text: '本回合所有荒原地塊上的建築產出為0',
         effect: () => { window.sandstormActive = true; } },
-      { range: [3,4], text: '立即獲得50金幣',
-        effect: () => { currentGold += 50; updateResourceDisplay(); } },
-      { range: [5,6], text: '立即獲得2張隨機的荒原建築',
+      { range: [31,70], text: '立即獲得30金幣',
+        effect: () => { currentGold += 30; updateResourceDisplay(); } },
+      { range: [71,100], text: '立即獲得1張隨機的荒原建築',
         effect: () => {
-          for (let i=0; i<2; i++) {
-            const pool = cardPoolData.filter(c=>c.label==='荒原'&&c.type==='building');
-            const pick = pool[Math.floor(Math.random()*pool.length)];
-            document.getElementById('hand').appendChild(createBuildingCard(pick));
-          }
+          const pool = cardPoolData.filter(c=>c.label==='荒原'&&c.type==='building');
+          const pick = pool[Math.floor(Math.random()*pool.length)];
+          document.getElementById('hand').appendChild(createBuildingCard(pick));
         }
       }
+    ]
+  },
+  // 新增「洪水氾濫」事件
+  {
+    id: 'flood',
+    name: '洪水氾濫',
+    outcomes: [
+      { range: [1,30], text: '隨機摧毀一個河流地塊上的建築（若無則無效果）',
+        effect: () => {
+          const riverTiles = tileMap.filter(t=>t.type==='river'&&t.buildingPlaced);
+          if (!riverTiles.length) return;
+          const t = riverTiles[Math.floor(Math.random()*riverTiles.length)];
+          document.querySelector(`[data-tile-id="${t.id}"]`).innerHTML = '?';
+          t.buildingPlaced = false;
+          recalcRevenueFromScratch();
+        }
+      },
+      { range: [31,70], text: '隨機一個與河流地塊相鄰的地塊，變化為河流地塊',
+        effect: () => {
+          // 1)蒐集所有 river 鄰接的 tile id
+          const neigh = new Set();
+          tileMap.filter(t=>t.type==='river').forEach(r=>{
+            r.adjacency.forEach(id=>neigh.add(id));
+          });
+          // 2) 只留 type !== 'river' 的鄰接格
+          const candidates = [...neigh]
+            .map(id => tileMap.find(t => t.id === id))
+            .filter(t => t.type !== 'river');
+          if (candidates.length === 0) return;  // 沒地方可 flood 就跳過
+          const pick = candidates[Math.floor(Math.random()*candidates.length)];
+          // 3) 把它變河流
+          pick.type = 'river';
+          document.querySelector(`[data-tile-id="${pick.id}"]`)
+                  .className = `hex-tile river-tile`;
+        }
+      },
+      { range: [71,100], text: '本回合所有河流地塊上的建築產出加倍',
+        effect: () => { window.floodActive = true; } }
     ]
   }
 ];
@@ -142,19 +180,19 @@ function isSlumLayoutValid(types) {
 
 const cardPoolData = [
   { name:'淨水站', rarity:'普通', label:'河流',     baseProduce:4, specialAbility:'若相鄰地塊有河流地塊，則產出 +1' ,type:'building' },
-  { name:'星軌會館', rarity:'稀有', label:'繁華區',  baseProduce:6, specialAbility:'沒有任何建築相臨時，產出額外+2' ,type:'building' },
+  { name:'星軌會館', rarity:'稀有', label:'繁華區',  baseProduce:5, specialAbility:'沒有任何貧民窟建築相臨時，產出額外+3' ,type:'building' },
   { name:'摩天坊', rarity:'普通', label:'繁華區', baseProduce:5 ,type:'building' },
   { name:'集貧居', rarity:'普通', label:'貧民窟', baseProduce:4 ,type:'building' },
   { name:'廢土站', rarity:'普通', label:'荒原',   baseProduce:3 ,type:'building' },
   { name:'廢材棚', rarity:'普通', label:'荒原',   baseProduce:4 ,type:'building' },
   { name:'社群站', rarity:'普通', label:'貧民窟', baseProduce:4, specialAbility:'當有任何建築相臨時，產出額外+1' ,type:'building' },
-  { name:'彈出商亭', rarity:'普通', label:'繁華區', baseProduce:5, specialAbility:'當位於任何邊緣地塊時，產出額外+1' ,type:'building' },
-  { name:'地脈節點', rarity:'普通', label:'荒原', baseProduce:6, specialAbility:'當恰好有兩個建築相臨時，包含此建築的，合計三座建築產出額外+1' ,type:'building' },
+  { name:'彈出商亭', rarity:'普通', label:'繁華區', baseProduce:3, specialAbility:'當位於任何邊緣地塊時，產出額外+3' ,type:'building' },
+  { name:'地脈節點', rarity:'普通', label:'荒原', baseProduce:3, specialAbility:'當恰好有兩個建築相臨時，包含此建築的，合計三座建築產出額外+1' ,type:'building' },
   { name:'匯聚平臺', rarity:'稀有', label:'貧民窟', baseProduce:5, specialAbility:'當相鄰的建築超過2個時，產出額外+2' ,type:'building' },
   { name:'流動站',   rarity:'稀有', label:'河流',   baseProduce:5, specialAbility:'若相鄰的建築位於河流地塊上，該建築產出額外+1' ,type:'building' },
   { name:'焚料方艙', rarity:'稀有', label:'荒原',   baseProduce:8, specialAbility:'若本回合為偶數回合，產出永久−1，最多永久減少4' ,type:'building' },
   { name:'廉租居',     rarity:'普通', baseProduce:3, label:'貧民窟' ,type:'building' },
-  { name:'灣岸輸能站', rarity:'普通', baseProduce:6, label:'河流', specialAbility:'若沒有位於河流，每回合產出-1' ,type:'building' },
+  { name:'灣岸輸能站', rarity:'普通', baseProduce:5, label:'河流', specialAbility:'若沒有位於河流，每回合產出-2' ,type:'building' },
   { name:'垂直農倉',   rarity:'稀有', baseProduce:6, label:'貧民窟', specialAbility:'每有 1 座垂直農倉相鄰，產出 +1（最多 +2）' ,type:'building' },
   { name:'通訊樞紐',   rarity:'稀有', baseProduce:6, label:'荒原',   specialAbility:'此建築可同時視為擁有所有地塊 tag，能觸發所有地塊 tag 效果（不改變地塊本身）' ,type:'building' },
   { name:'廢物利用', rarity:'普通', baseProduce:0, specialAbility:'荒原地塊能力的產出額外 +1 金幣', type:'tech' },
@@ -166,6 +204,14 @@ const techDefinitions = {
   '廢物利用': { rarity:'普通', description:'荒原地塊能力的產出額外', perLevel:1, count:0, max:5 },
   '地價升值': { rarity:'稀有', description:'繁華區地塊能力的產出額外', perLevel:2, count:0, max:5 }
 };
+
+// 新增：卡池中每張卡最多 5 張
+let poolCounts = {};
+function initPoolCounts() {
+  cardPoolData.forEach(c => poolCounts[c.name] = 5);
+}
+// 進入遊戲時先初始化一次
+initPoolCounts();
 
 const labelEffectDesc = {
   "繁華區":"蓋在繁華區時+4",
@@ -239,6 +285,7 @@ function restartGame() {
   refreshCount = 0;
   warningNextRoundShown = false;
   lastPlacement = null;
+  initPoolCounts();
 
   // —— 新增：重置道具系統 —— 
   selectedItem    = null;
@@ -300,6 +347,7 @@ function drawOneCard(typeConstraint, rarity, excludedSet) {
     c.rarity === rarity &&
     (typeConstraint === 'either' || c.type === typeConstraint) &&
     !excludedSet.has(c.name)
+    && poolCounts[c.name] > 0
     // 排除：科技卡已使用達上限
     && !(c.type==='tech' && techDefinitions[c.name].count >= techDefinitions[c.name].max)                               
   );
@@ -310,6 +358,7 @@ function drawOneCard(typeConstraint, rarity, excludedSet) {
        c.rarity === rarity &&
        c.type === 'building' &&
        !excludedSet.has(c.name)
+       && poolCounts[c.name] > 0                       
      );
      if (fallback.length > 0) {
        const pick2 = fallback[Math.floor(Math.random() * fallback.length)];
@@ -440,11 +489,12 @@ function calculateRevenue(map) {
       if (hasRiverNeighbor) t.buildingProduce++;
    }
     if(t.buildingName==='星軌會館'){
-       const hasN = t.adjacency.some(id=>{
-        const nt=clone.find(x=>x.id===id);
-        return nt&&nt.buildingPlaced;
-      });
-      if(!hasN) t.buildingProduce+=2;
+       // 改为：检查是否有相邻建筑的 label === '貧民窟'
+       const hasSlumLabelNeighbor = t.adjacency.some(id => {
+         const nt = clone.find(x => x.id === id);
+         return nt && nt.buildingPlaced && nt.buildingLabel === '貧民窟';
+       });
+       if (!hasSlumLabelNeighbor) t.buildingProduce += 3;
     }
     // 社群站：若與至少 1 座其他建築相鄰，額外 +1
    if(t.buildingName==='社群站'){
@@ -454,13 +504,13 @@ function calculateRevenue(map) {
      });
      if(hasNeighbor) t.buildingProduce++;
    }
-   // 彈出商亭：若處於地圖邊緣格，額外 +1
+   // 彈出商亭：若處於地圖邊緣格，額外 +3
    if(t.buildingName==='彈出商亭'){
      const row = t.row, col = t.col;
      const lastRow = rows.length - 1;
      const rowCount = rows[row];
      if(row === 0 || row === lastRow || col === 0 || col === rowCount - 1){
-       t.buildingProduce++;
+       t.buildingProduce+=3;
      }
    }
   // 地脈節點：若相鄰建築恰為2，則包含自己在內的3座每座+1
@@ -496,9 +546,9 @@ function calculateRevenue(map) {
        t.buildingProduce = Math.max(t.buildingProduce - 1, 4);
      }
    }
-  // 灣岸輸能站：若不在河流地塊，每回合 −1
+  // 灣岸輸能站：若不在河流地塊，每回合 −2
   if (t.buildingName === '灣岸輸能站' && t.type !== 'river') {
-    t.buildingProduce -= 1;
+    t.buildingProduce -= 2;
   }
   // 垂直農倉：每有 1 座鄰接的垂直農倉，+1（金幣），最多 +2
   if (t.buildingName === '垂直農倉') {
@@ -646,11 +696,12 @@ function simulateTileDiffs(tileId) {
     }
     // 星軌會館
     if (t.buildingName === '星軌會館') {
-      const hasNeighbor = t.adjacency.some(id => {
-        const nt = cloneMap.find(x => x.id === id);
-        return nt && nt.buildingPlaced;
-      });
-      if (!hasNeighbor) t.buildingProduce += 2;
+      // 改为：检查是否有相邻建筑的 label === '貧民窟'
+       const hasSlumLabelNeighbor = t.adjacency.some(id => {
+         const nt = tileMap.find(x => x.id === id);
+         return nt && nt.buildingPlaced && nt.buildingLabel === '貧民窟';
+       });
+       if (!hasSlumLabelNeighbor) t.buildingProduce += 3;
     }
     // 社群站
     if (t.buildingName === '社群站') {
@@ -665,7 +716,7 @@ function simulateTileDiffs(tileId) {
       const row = t.row, col = t.col;
       const lastRow = rows.length - 1, rowCount = rows[row];
       if (row === 0 || row === lastRow || col === 0 || col === rowCount - 1) {
-        t.buildingProduce++;
+        t.buildingProduce+=3;
       }
     }
     // 地脈節點
@@ -700,7 +751,7 @@ function simulateTileDiffs(tileId) {
     }
     // 灣岸輸能站
     if (t.buildingName === '灣岸輸能站' && t.type !== 'river') {
-      t.buildingProduce--;
+      t.buildingProduce-=2;
     }
     // 垂直農倉
     if (t.buildingName === '垂直農倉') {
@@ -1019,16 +1070,16 @@ function updateStageBar() {
     cdEl.innerText = '';
   }
 
-  // 新增：事件倒數計時
-  const evEl = document.getElementById('event-countdown');
-  const diffEvt = nextEventRound - currentRound;
-  if (diffEvt > 0) {
-    evEl.innerText = `${diffEvt} 回合後會發生${currentEvent.name}`;
-  } else if (diffEvt === 0) {
-    evEl.innerText = `本回合會發生${currentEvent.name}`;
-  } else {
-    evEl.innerText = '';
-  }
+  // 在 updateStageBar() 裡，改成用 innerHTML 並包一層 <span class="event-name">
+   const evEl = document.getElementById('event-countdown');
+   const diffEvt = nextEventRound - currentRound;
+   if (diffEvt > 0) {
+     evEl.innerHTML = `${diffEvt} 回合後會發生 <span class="event-name">${currentEvent.name}</span>`;
+   } else if (diffEvt === 0) {
+     evEl.innerHTML = `本回合會發生 <span class="event-name">${currentEvent.name}</span>`;
+   } else {
+     evEl.innerHTML = '';
+   }
 }
 
 // 建築卡牌生成
@@ -1199,6 +1250,8 @@ function confirmDraw(){
    const hand = document.getElementById('hand');
   selected.forEach(c => {
     const name = c.querySelector('.card-name').innerText;
+    // 扣掉一張卡池數量
+    poolCounts[name]--;
     const type = c.dataset.type;
     if (type === 'tech') {
       // 使用科技卡：計數 +1，更新科技樹
@@ -1326,11 +1379,12 @@ function recalcRevenueFromScratch(){
       if (hasRiverNeighbor) t.buildingProduce++;
    }
     if(t.buildingName==='星軌會館'){
-       const hasN = t.adjacency.some(id=>{
-        const nt=tileMap.find(x=>x.id===id);
-        return nt&&nt.buildingPlaced;
-      });
-      if(!hasN) t.buildingProduce+=2;
+       // 改为：检查是否有相邻建筑的 label === '貧民窟'
+       const hasSlumLabelNeighbor = t.adjacency.some(id => {
+         const nt = tileMap.find(x => x.id === id);
+         return nt && nt.buildingPlaced && nt.buildingLabel === '貧民窟';
+       });
+       if (!hasSlumLabelNeighbor) t.buildingProduce += 3;
     }
     // 社群站：若與至少 1 座其他建築相鄰，額外 +1
    if(t.buildingName==='社群站'){
@@ -1346,7 +1400,7 @@ function recalcRevenueFromScratch(){
      const lastRow = rows.length - 1;
      const rowCount = rows[row];
      if(row === 0 || row === lastRow || col === 0 || col === rowCount - 1){
-       t.buildingProduce++;
+       t.buildingProduce+=3;
      }
    }
   // 地脈節點：若相鄰建築恰為2，則包含自己在內的3座每座+1
@@ -1382,9 +1436,9 @@ function recalcRevenueFromScratch(){
        t.buildingProduce = Math.max(t.buildingProduce - 1, 4);
      }
    }
-  // 灣岸輸能站：若不在河流地塊，每回合 −1
+  // 灣岸輸能站：若不在河流地塊，每回合 −2
   if (t.buildingName === '灣岸輸能站' && t.type !== 'river') {
-    t.buildingProduce -= 1;
+    t.buildingProduce -= 2;
   }
   // 垂直農倉：每有 1 座鄰接的垂直農倉，+1（金幣），最多 +2
   if (t.buildingName === '垂直農倉') {
@@ -1431,10 +1485,15 @@ function recalcRevenueFromScratch(){
      }
     if (dijiaDef && t.type === 'city')     val += dijiaDef.perLevel * dijiaDef.count;
     total += val;
+     // 洪水氾濫：河流地塊當回合產出翻倍
+    if (window.floodActive && t.type === 'river') {
+     val *= 2;
+      }
   });
   // 清除本回合 flag
   window.sandstormActive = false;
   window.hydroActive     = false;
+  window.floodActive     = false;  // <-- 清掉 floodActive
 
   roundRevenue = total;
   updateResourceDisplay();
@@ -1588,6 +1647,9 @@ function updateTechTree() {
 }
 
  function showEvent() {
+  eventBonusUsed = false;
+  eventBonus     = 0;
+  document.getElementById('exchange-info').style.display = 'none';
   // 顯示 event-modal
   document.getElementById('event-title').innerText = currentEvent.name;
   const opts = document.getElementById('event-options');
@@ -1596,18 +1658,52 @@ function updateTechTree() {
     opts.innerHTML += `<p>${o.range[0]}–${o.range[1]}：${o.text}</p>`;
   });
   document.getElementById('event-modal').style.display = 'flex';
+  document.getElementById('event-title').querySelector('#event-name-text')
+    .innerText = currentEvent.name;
+  // 換按鈕文字
+  document.getElementById('roll-event-btn').innerText = '擲骰';
+  document.getElementById('exchange-points-btn').innerText = '兌換點數';
+  document.getElementById('event-modal').style.display = 'flex';
 }
+
+document.getElementById('exchange-points-btn').onclick = () => {
+  if (eventBonusUsed) return;               // 已經用過，就直接不做任何事
+  if (currentGold < 20) { alert('金幣不足'); return; }
+  if (confirm('是否消耗20金幣，使擲骰結果+10？')) {
+    currentGold   -= 20;
+    eventBonusUsed = true;                  // 標記已經使用過
+    eventBonus     = 10;                    // 本次事件加成 +10
+    updateResourceDisplay();
+    document.getElementById('exchange-info').style.display = 'block';
+    // 隱藏「兌換點數」按鈕，確保一次事件只能用一次
+    document.getElementById('exchange-points-btn').style.display = 'none';
+  }
+};
 
 // 玩家按「抽取」
 document.getElementById('roll-event-btn').onclick = () => {
-  const roll = Math.floor(Math.random()*6) + 1;
-  const outcome = currentEvent.outcomes.find(o => roll >= o.range[0] && roll <= o.range[1]);
+  // 先擲一次 1~100，原始值
+   const baseRoll  = Math.floor(Math.random() * 100) + 1;
+   // 如果用了兌換，最終點數就是 baseRoll + eventBonus（上限100）
+   const finalRoll = eventBonusUsed
+     ? Math.min(100, baseRoll + eventBonus)
+     : baseRoll;
+   const outcome = currentEvent.outcomes
+     .find(o => finalRoll >= o.range[0] && finalRoll <= o.range[1]);
   // 先關閉事件選項
   document.getElementById('event-modal').style.display = 'none';
+  
+  // 顯示結果：94 (84+10) → 效果文字
+   let txt = `擲骰：${finalRoll}`;
+   if (eventBonusUsed) {
+     txt += ` (${baseRoll}+${eventBonus})`;
+   }
+   txt += ` → ${outcome.text}`;
+   document.getElementById('event-result-text').innerText = txt;
+
   // 執行效果
   outcome.effect();
-  // 顯示結果
-  document.getElementById('event-result-text').innerText = `擲骰：${roll} → ${outcome.text}`;
+  // 打開“事件结果”窗口
   document.getElementById('event-result-modal').style.display = 'flex';
 };
 
