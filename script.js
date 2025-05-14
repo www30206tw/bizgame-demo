@@ -180,6 +180,7 @@ function isSlumLayoutValid(types) {
 
 const cardPoolData = [
   { name:'淨水站', rarity:'普通', label:'河流',     baseProduce:4, specialAbility:'若相鄰地塊有河流地塊，則產出 +1' ,type:'building' },
+  { name: '河畔工坊', rarity: '普通', label: '河流', baseProduce:3, specialAbility: '回合結束時，若此建築在手牌中，則此建築的產出永久+1（最多+7）', type: 'building'},
   { name:'星軌會館', rarity:'稀有', label:'繁華區',  baseProduce:5, specialAbility:'沒有任何貧民窟建築相臨時，產出額外+3' ,type:'building' },
   { name:'摩天坊', rarity:'普通', label:'繁華區', baseProduce:5 ,type:'building' },
   { name:'集貧居', rarity:'普通', label:'貧民窟', baseProduce:4 ,type:'building' },
@@ -251,6 +252,28 @@ const paymentSchedule = { 5:180, 10:640, 16:1250 ,22:2000};
 let tileMap = [];
 
 // 工具函式
+
+/**
+ * 把手牌中所有「河畔工坊」的产出 +1（最多 +7），
+ * 并同步更新卡面上的数字。
+ */
+function handleRiversideWorkshopUpgrade() {
+  const SPECIAL = '河畔工坊';
+  document.querySelectorAll('#hand .card').forEach(card => {
+    const name = card.querySelector('.card-name').innerText;
+    if (name !== SPECIAL) return;
+    let cnt = parseInt(card.dataset.upgradeCount || '0');
+    if (cnt >= 7) return;
+    // 增产
+    cnt++;
+    card.dataset.upgradeCount = cnt;
+    const oldP = parseInt(card.dataset.produce);
+    const newP = oldP + 1;
+    card.dataset.produce = newP;
+    // 更新卡面上的数字
+    card.querySelector('.card-gold-output').innerText = newP;
+  });
+}
 
 // 顯示「遊戲結束」畫面
 function showEndScreen(msg) {
@@ -389,6 +412,8 @@ function createTileMap31(){
         // 從 initialTileTypes 拿對應位置的類型
         type: initialTileTypes[id - 1],
         buildingProduce: 0,
+        buildingBaseProduce: 0,    // ← 新增
+        permDeductCount: 0,         // ← 新增：已永久減少次數
         buildingPlaced: false,
         slumBonusGranted: false,
         adjacency: [],
@@ -957,10 +982,23 @@ function initMapArea(){
 
     // 拖过地块时，显示对应预览
     hex.addEventListener('dragover', e => {
-  if (!draggingCardInfo) return;
-  e.preventDefault();
-  clearPreviews();
-  showPreviews(hex.dataset.tileId);
+    e.preventDefault();
+  
+    // 如果正在拖的是手牌，就顯示預覽
+    if (draggingCardInfo) {
+      clearPreviews();
+      showPreviews(hex.dataset.tileId);
+    }
+  });
+
+    hex.addEventListener('drop', e => {
+    e.preventDefault();
+    const cid = e.dataTransfer.getData('cardId');
+    const card = document.querySelector(`[data-card-id="${cid}"]`);
+    if (!card) return;
+    e.preventDefault();
+    clearPreviews();
+    showPreviews(hex.dataset.tileId);
   });
 
      mapArea.appendChild(hex);
@@ -1085,6 +1123,10 @@ function updateStageBar() {
 // 建築卡牌生成
 function createBuildingCard(info){
   const card = document.createElement('div');
+  // 如果是「河畔工坊」，给它一个升级计数
+  if (info.name === '河畔工坊') {
+    card.dataset.upgradeCount = 0;
+  }
   // 新增：記錄卡片類型 (building 或 tech)
   card.dataset.type = info.type;
   card.className = 'card';
@@ -1134,7 +1176,7 @@ function createBuildingCard(info){
   draggingCardInfo = {
      name:             info.name,
      type:             info.type,
-     baseProduce:      info.baseProduce,
+     baseProduce:      parseInt(card.dataset.produce),
      label:            info.label,
      specialAbility:   info.specialAbility || '',
      rarity:           info.rarity
@@ -1250,9 +1292,11 @@ function confirmDraw(){
    const hand = document.getElementById('hand');
   selected.forEach(c => {
     const name = c.querySelector('.card-name').innerText;
-    // 扣掉一張卡池數量
-    poolCounts[name]--;
     const type = c.dataset.type;
+    // 扣掉一張卡池數量
+    if (type === 'building') {
+    poolCounts[name]--;
+    }
     if (type === 'tech') {
       // 使用科技卡：計數 +1，更新科技樹
       techDefinitions[name].count = Math.min(
@@ -1429,12 +1473,6 @@ function recalcRevenueFromScratch(){
          x.buildingProduce++;
        }
      });
-   }
-  // 焚料方艙：偶數回合產出−1，下限4
-   if(t.buildingName==='焚料方艙'){
-     if(currentRound % 2 === 0){
-       t.buildingProduce = Math.max(t.buildingProduce - 1, 4);
-     }
    }
   // 灣岸輸能站：若不在河流地塊，每回合 −2
   if (t.buildingName === '灣岸輸能站' && t.type !== 'river') {
@@ -1648,6 +1686,8 @@ function updateTechTree() {
 
  function showEvent() {
   eventBonusUsed = false;
+  document.getElementById('exchange-points-btn').style.display = 'inline-block';
+  document.getElementById('exchange-info').style.display = 'none';
   eventBonus     = 0;
   document.getElementById('exchange-info').style.display = 'none';
   // 顯示 event-modal
@@ -1718,6 +1758,21 @@ document.getElementById('event-result-close-btn').onclick = () => {
 
 // 新增：把「正常的回合結束流程」抽成一支函式
 function finishEndTurn() {
+  //  新增：「焚料方艙」動態減 1
+    if (currentRound % 2 === 0) {
+      tileMap.forEach(t => {
+        if (t.buildingName === '焚料方艙' && t.permDeductCount < 4) {
+          t.buildingBaseProduce -= 1;
+          t.permDeductCount += 1;
+          // 同步更新畫面上若有對應的地塊懸浮或手牌顯示
+          //（放在 tile-mouseenter popup 裡讀 t.buildingBaseProduce 即可自動顯示）
+        }
+      });
+    }
+  
+  // —— 新增：先给「河畔工坊」升级一次（手牌中每张最多 +7） —— 
+  handleRiversideWorkshopUpgrade();
+  
   // 1. 加回合收益
   currentGold += roundRevenue;
   updateResourceDisplay();
